@@ -1,0 +1,1096 @@
+<title>CandaceCalc</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Courier+Prime:wght@400;700&family=Archivo:wdth,wght@75..100,600..800&display=swap">
+<style>
+/* Layout: one handheld printing calculator on a desk. Paper tape feeds out the top,
+   amber display and big keys below. Single committed look (no dark variant by design). */
+:root {
+  --desk: #2f2620;
+  --casing: #d8cbb0;
+  --casing-edge: #b3a383;
+  --casing-ink: #5b4d3c;
+  --lcd-bg: #1b1408;
+  --lcd-glow: #ffb21a;
+  --lcd-dim: #4a3510;
+  --key-cream: #f1e9d8;
+  --key-cream-edge: #b9ad94;
+  --key-brown: #6a5644;
+  --key-brown-edge: #3e3127;
+  --key-red: #a83a2c;
+  --key-red-edge: #6b2219;
+  --key-amber: #d4782a;
+  --key-amber-edge: #8b4a14;
+  --key-ink: #2a241d;
+  --key-ink-light: #f6eddc;
+  --paper: #fbf8ef;
+  --paper-shade: #ece5d3;
+  --ink: #2b2723;
+  --ink-red: #b02a1e;
+  --ink-faint: #8a8174;
+  --focus: #ffd36b;
+
+  --font-lcd: "VT323", ui-monospace, "Courier New", monospace;
+  --font-tape: "Courier Prime", "Courier New", Courier, monospace;
+  --font-key: "Archivo", "Arial Narrow", Arial, sans-serif;
+  --casing-hi: #e3d7be;
+  --casing-lo: #cbbd9f;
+  --casing-sub: #85765f;
+  --note: #5d5142;
+  --panel: #efe4cc;
+  --key-cream-hi: rgba(255,255,255,.7);
+  --lcd-bezel: #3b3127;
+  --slot-a: #2a221b;
+  --slot-b: #4b3f33;
+  color-scheme: light;
+}
+/* Dark machine finish (black office printing calculator); paper stays white */
+:root[data-finish="dark"] {
+  --casing: #252527;
+  --casing-hi: #323235;
+  --casing-lo: #1b1b1d;
+  --casing-edge: #0c0c0d;
+  --casing-ink: #d6d2ca;
+  --casing-sub: #8f8b84;
+  --note: #b9b4aa;
+  --panel: #303034;
+  --key-cream: #3b3b40;
+  --key-cream-edge: #121214;
+  --key-cream-hi: rgba(255,255,255,.12);
+  --key-ink: #f3f0e9;
+  --key-brown: #58585f;
+  --key-brown-edge: #1e1e21;
+  --lcd-bezel: #101011;
+  --slot-a: #050505;
+  --slot-b: #1e1e20;
+}
+html, body { height: 100%; }
+body {
+  background: radial-gradient(120% 80% at 50% 0%, #3d3129 0%, var(--desk) 70%);
+  color: var(--ink);
+  font-family: var(--font-key);
+  overflow: hidden;
+}
+.stage {
+  height: 100%;
+  box-sizing: border-box;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px 12px;
+  display: flex;
+  justify-content: center;
+}
+.machine {
+  width: 93%;
+  max-width: 428px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  container-type: inline-size;
+}
+/* Paper position options: wide centered (default), narrow centered, left, right */
+.machine[data-paper="narrow"] .tape-wrap { width: 60cqw; align-self: center; margin-inline: 0; }
+.machine[data-paper="left"] .tape-wrap { width: 60cqw; align-self: flex-start; }
+.machine[data-paper="right"] .tape-wrap { width: 60cqw; align-self: flex-end; }
+/* slot tracks the paper; the casing is zoomed by --z, so convert screen px back into casing px */
+/* slot's right edge sits flush with the paper's right edge; it extends 4px past the paper on the left */
+.machine[data-paper="narrow"] .slot { width: calc((var(--tapew, 60cqw) + 4px) / var(--z, 1)); align-self: center; margin: 0; left: calc(-2px / var(--z, 1)); }
+.machine[data-paper="left"] .slot { width: calc((var(--tapew, 60cqw) + 4px) / var(--z, 1)); align-self: flex-start; margin: 0 0 0 calc(18px / var(--z, 1) - 14px); }
+.machine[data-paper="right"] .slot { width: calc((var(--tapew, 60cqw) + 4px) / var(--z, 1)); align-self: flex-end; margin: 0 calc(22px / var(--z, 1) - 14px) 0 0; }
+.machine:not([data-paper="wide"]) .tape { padding-inline: 13px; }
+.machine:not([data-paper="wide"]) .line { font-size: 20px; }
+.machine:not([data-paper="wide"]) .line.total { font-size: 22px; }
+.machine:not([data-paper="wide"]) .stamp { font-size: 13px; }
+
+/* ---------- Paper tape ---------- */
+.tape-wrap {
+  flex: 1 1 auto;
+  min-height: 150px;
+  position: relative;
+  margin-inline: 22px;
+  /* paper runs down behind the casing's top edge and disappears into the printer slot */
+  margin-bottom: -13px;
+  z-index: 2;
+  display: flex;
+  perspective: 700px;
+  perspective-origin: 50% 100%;
+}
+.tape {
+  flex: 1;
+  overflow-y: auto;
+  transform: rotateX(13deg);
+  transform-origin: 50% 100%;
+  /* paper leans back from the slot: shading deepens toward the torn top edge */
+  background:
+    linear-gradient(180deg, rgba(70,52,34,.30) 0, rgba(70,52,34,.12) 12%, rgba(70,52,34,0) 32%),
+    linear-gradient(0deg, rgba(40,28,20,.20) 0, rgba(40,28,20,0) 22px),
+    linear-gradient(90deg, var(--paper-shade) 0, var(--paper) 10px, var(--paper) calc(100% - 10px), var(--paper-shade) 100%);
+  box-shadow: 0 6px 18px rgba(0,0,0,.35);
+  padding: 18px 18px 31px;
+  font-family: var(--font-tape);
+  color: var(--ink);
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  /* torn top edge */
+  -webkit-mask: linear-gradient(#000, #000) 0 7px / 100% calc(100% - 7px) no-repeat,
+    conic-gradient(from -45deg at 50% 100%, #000 76deg, #0004 90deg, #0000 104deg) 0 0 / 10px 7.5px repeat-x;
+          mask: linear-gradient(#000, #000) 0 7px / 100% calc(100% - 7px) no-repeat,
+    conic-gradient(from -45deg at 50% 100%, #000 76deg, #0004 90deg, #0000 104deg) 0 0 / 10px 7.5px repeat-x;
+}
+@media (prefers-reduced-motion: reduce) { .tape { scroll-behavior: auto; } }
+/* no native scrollbar or arrow buttons: the rail beside the tape shows position instead */
+.tape { scrollbar-width: none; }
+.tape::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* depth: entries higher on the paper read as farther away (set per entry from script) */
+/* (applied inline by script, and only to the few entries in view) */
+
+/* history rail: how far back the tape goes, and where you are in it */
+.rail {
+  position: absolute; right: -22px; top: 10px; bottom: 25px; width: 22px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
+}
+.rail[hidden] { display: none; }
+.rail-label {
+  font-family: var(--font-key); font-weight: 700; font-size: 10px; letter-spacing: .04em;
+  color: #cdbd9f; line-height: 1; text-align: center; white-space: nowrap;
+}
+.rail-track {
+  position: relative; flex: 1; width: 6px; border-radius: 4px;
+  background: rgba(0,0,0,.35); box-shadow: inset 0 1px 2px rgba(0,0,0,.5);
+}
+.rail-thumb {
+  position: absolute; left: -2px; right: -2px; top: 0; min-height: 26px; border-radius: 6px;
+  background: linear-gradient(90deg, #efe6d2, var(--paper) 50%, #d8ccb2);
+  box-shadow: 0 1px 3px rgba(0,0,0,.45);
+}
+.rail-now {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--lcd-glow);
+  box-shadow: 0 0 6px rgba(255,170,20,.7); opacity: .25; transition: opacity .2s;
+}
+.rail-now.on { opacity: 1; }
+.tape-inner { display: flex; flex-direction: column; justify-content: flex-end; min-height: 100%; gap: 0; }
+.tape-empty {
+  text-align: center; color: var(--ink-faint); font-size: 17px; line-height: 1.5; padding: 24px 6px;
+}
+.entry { padding: 10px 0 12px; border-bottom: 1.5px dashed #cfc6b2; overflow: hidden; }
+.entry:last-child { border-bottom: 0; }
+.stamp {
+  display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  font-size: 15px; letter-spacing: .04em; color: var(--ink-faint); margin-bottom: 6px;
+}
+.stamp b { font-weight: 700; color: #6d655a; }
+.line {
+  display: grid; grid-template-columns: 1fr 1.6em;
+  font-size: 24px; line-height: 1.25; font-variant-numeric: tabular-nums;
+}
+.line .num { text-align: right; overflow-wrap: anywhere; min-width: 0; }
+.line .op { text-align: right; font-weight: 700; }
+.line.total { font-weight: 700; font-size: 27px; border-top: 1.5px solid var(--ink); margin-top: 3px; padding-top: 2px; }
+.neg { color: var(--ink-red); }
+.sample-tag { color: var(--ink-red); font-weight: 700; }
+/* print reveal: clip, not max-height, so the tape isn't re-laid-out every frame */
+.entry.printing { animation: feed var(--feed-ms, 700ms) steps(6, end) both; }
+@keyframes feed { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) { .entry.printing { animation: none; } }
+
+/* ---------- Casing ---------- */
+.casing {
+  flex: 0 0 auto;
+  /* the whole calculator body scales down together (set from script) so the paper gets the room;
+     width is compensated so the body still spans the full width */
+  zoom: var(--z, 1);
+  width: calc(100% / var(--z, 1));
+  box-sizing: border-box;
+  background: linear-gradient(180deg, var(--casing-hi) 0%, var(--casing) 45%, var(--casing-lo) 100%);
+  border-radius: 22px 22px 26px 26px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -4px 0 var(--casing-edge), 0 14px 30px rgba(0,0,0,.45);
+  padding: 12px 14px 16px;
+  margin-top: -6px;
+  position: relative;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.slot {
+  position: relative; z-index: 1;
+  height: 12px; margin: 0 calc(22px / var(--z, 1) - 14px) 0 calc(18px / var(--z, 1) - 14px); border-radius: 6px;
+  border-bottom: 2px solid var(--casing-hi);
+  background: linear-gradient(var(--slot-a), var(--slot-b));
+  box-shadow: inset 0 2px 3px rgba(0,0,0,.6);
+}
+.plate { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.brand { display: flex; flex-direction: column; line-height: 1; }
+.brand-name {
+  font-family: var(--font-key); font-weight: 800; font-stretch: 75%; letter-spacing: .14em;
+  font-size: 13.5px; color: var(--casing-ink); text-transform: uppercase;
+}
+.brand-model { font-size: 9px; letter-spacing: .18em; color: var(--casing-sub); margin-top: 3px; font-weight: 600; text-transform: uppercase; }
+.plate-right { display: flex; align-items: center; gap: 10px; }
+.solar { display: grid; grid-template-columns: repeat(4, 10px); gap: 2px; padding: 2px; background: #3a2e24; border-radius: 3px; }
+.solar span { height: 11px; background: linear-gradient(160deg, #6b4a32, #2d1d14); border-radius: 1px; }
+.settings-btn {
+  font-family: var(--font-key); font-weight: 700; font-size: 12px; letter-spacing: .06em;
+  min-height: 36px; padding: 0 11px; border-radius: 8px; border: 0; cursor: pointer;
+  background: var(--key-brown); color: var(--key-ink-light);
+  box-shadow: 0 4px 0 var(--key-brown-edge);
+  text-transform: uppercase;
+}
+.settings-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--key-brown-edge); }
+
+/* Display panel sits on a raised ledge, tilted up toward the user; keys lie flat below */
+.lcd-well {
+  perspective: 520px;
+  perspective-origin: 50% 130%;
+  padding-top: 4px;
+  position: relative;
+}
+.lcd-well::after {
+  content: ""; position: absolute; left: 6px; right: 6px; bottom: -7px; height: 9px; pointer-events: none;
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(var(--casing-lo), var(--casing-edge));
+  box-shadow: 0 4px 6px rgba(0,0,0,.28);
+}
+.lcd {
+  background: var(--lcd-bg);
+  border-radius: 10px;
+  border: 6px solid var(--lcd-bezel);
+  box-shadow: inset 0 4px 12px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.25), 0 -3px 8px rgba(0,0,0,.25);
+  padding: 9px 14px 8px;
+  font-family: var(--font-lcd);
+  color: var(--lcd-glow);
+  text-shadow: 0 0 1px rgba(255,190,40,.9), 0 0 5px rgba(255,170,20,.22);
+  -webkit-font-smoothing: antialiased;
+  position: relative; z-index: 1;
+  transform: rotateX(-8deg);
+  transform-origin: 50% 100%;
+}
+.lcd-flags { display: flex; justify-content: space-between; font-size: 20px; height: 20px; line-height: 20px; color: var(--lcd-dim); text-shadow: none; }
+.lcd-flags .on { color: var(--lcd-glow); text-shadow: 0 0 1px rgba(255,190,40,.9); }
+.keys { margin-top: 6px; }
+.lcd-main {
+  font-size: clamp(60px, 17vw, 84px); line-height: 1; text-align: right;
+  white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums;
+  padding-bottom: 4px;
+}
+
+/* ---------- Keys ---------- */
+.keys {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px;
+}
+.key {
+  font-family: var(--font-key);
+  font-weight: 800;
+  font-size: clamp(28px, 8vw, 36px);
+  height: clamp(54px, 8.3dvh, 70px);
+  border: 0; border-radius: 14px; cursor: pointer;
+  color: var(--key-ink); background: var(--key-cream);
+  box-shadow: 0 6px 0 var(--key-cream-edge), 0 8px 10px rgba(0,0,0,.25), inset 0 2px 0 var(--key-cream-hi);
+  transition: transform 40ms, box-shadow 40ms;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none; -webkit-user-select: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.key.fn { background: var(--key-brown); color: var(--key-ink-light); box-shadow: 0 6px 0 var(--key-brown-edge), 0 8px 10px rgba(0,0,0,.25), inset 0 2px 0 rgba(255,255,255,.18); font-size: clamp(22px, 6.2vw, 28px); }
+.key.op { background: var(--key-brown); color: var(--key-ink-light); box-shadow: 0 6px 0 var(--key-brown-edge), 0 8px 10px rgba(0,0,0,.25), inset 0 2px 0 rgba(255,255,255,.18); font-size: clamp(32px, 9vw, 40px); }
+.key.clear { background: var(--key-red); color: var(--key-ink-light); box-shadow: 0 6px 0 var(--key-red-edge), 0 8px 10px rgba(0,0,0,.25), inset 0 2px 0 rgba(255,255,255,.2); font-size: clamp(22px, 6.2vw, 28px); }
+.key.eq { background: var(--key-amber); color: var(--key-ink-light); box-shadow: 0 6px 0 var(--key-amber-edge), 0 8px 10px rgba(0,0,0,.25), inset 0 2px 0 rgba(255,255,255,.25); font-size: clamp(34px, 9.5vw, 42px); }
+.key.op.active { outline: 3px solid var(--lcd-glow); outline-offset: -3px; }
+.key:active, .key.pressed { transform: translateY(5px); box-shadow: 0 1px 0 rgba(0,0,0,.35), 0 2px 3px rgba(0,0,0,.2); }
+.key:focus-visible, .settings-btn:focus-visible, .sheet button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- Settings sheet ---------- */
+.scrim { position: fixed; inset: 0; background: rgba(20,14,10,.55); z-index: 20; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
+  background: var(--casing); color: var(--key-ink);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -10px 30px rgba(0,0,0,.4);
+  padding-top: 18px;
+  max-height: 92dvh; overflow-y: auto; box-sizing: border-box;
+  padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+.sheet-inner { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.sheet h2 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: .02em; }
+.group { display: flex; flex-direction: column; gap: 10px; }
+.group-label { font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--casing-ink); }
+.seg.two { grid-template-columns: repeat(2, 1fr); }
+
+/* Cleared calculation: printed, then torn through. Kept on the tape, never used in math. */
+.lines { position: relative; }
+.entry.voided .lines { color: #8d857a; }
+.entry.voided .lines .neg { color: #c27a70; }
+.entry.voided .stamp span { color: var(--ink-red); font-weight: 700; }
+.rip {
+  position: absolute; left: -22px; right: -22px; height: 16px; margin-top: -8px;
+  background: linear-gradient(180deg, #1c140e, #3a2c22 50%, #1c140e);
+  filter: drop-shadow(0 -1px 0 #fffdf6) drop-shadow(0 1px 0 #fffdf6) drop-shadow(0 2px 2px rgba(0,0,0,.25));
+  pointer-events: none;
+  transform-origin: 0 50%;
+}
+.rip.tearing { animation: tear 260ms cubic-bezier(.3,.7,.2,1) both; }
+@keyframes tear { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .rip.tearing { animation: none; } }
+.entry.voided:not(.printing) { overflow: visible; } /* let the tear run to the paper's edges */
+.machine[data-dates="off"] .stamp { display: none; }
+.group-note { font-size: 16px; color: var(--note); line-height: 1.4; margin: 0; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.seg button, .row-btn {
+  font-family: var(--font-key); font-weight: 700; font-size: 20px;
+  min-height: 56px; border-radius: 12px; border: 0; cursor: pointer;
+  background: var(--key-cream); color: var(--key-ink);
+  box-shadow: 0 4px 0 var(--key-cream-edge);
+}
+.seg button[aria-pressed="true"] { background: var(--key-brown); color: var(--key-ink-light); box-shadow: 0 4px 0 var(--key-brown-edge); }
+.row-btn.danger { background: var(--key-red); color: var(--key-ink-light); box-shadow: 0 4px 0 var(--key-red-edge); }
+.seg button:active, .row-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.3); }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 20px; font-weight: 700; }
+.toggle-row .row-btn { min-width: 110px; }
+.confirm { display: flex; flex-direction: column; gap: 10px; background: var(--panel); border-radius: 12px; padding: 14px; }
+.confirm p { margin: 0; font-size: 18px; line-height: 1.4; }
+.confirm .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.done { margin-top: 4px; }
+</style>
+
+<div class="stage">
+  <main class="machine" id="machine" data-paper="wide" aria-label="CandaceCalc printing calculator">
+    <div class="tape-wrap">
+      <div class="tape" id="tape" role="log" aria-label="Calculation history tape" tabindex="0">
+        <div class="tape-inner" id="tapeInner"></div>
+      </div>
+      <div class="rail" id="rail" aria-hidden="true">
+        <span class="rail-label" id="railLabel"></span>
+        <div class="rail-track" id="railTrack"><div class="rail-thumb" id="railThumb"></div></div>
+        <span class="rail-now" id="railNow"></span>
+      </div>
+    </div>
+
+    <section class="casing">
+      <div class="slot" aria-hidden="true"></div>
+      <div class="plate">
+        <div class="brand">
+          <span class="brand-name">CandaceCalc</span>
+          <span class="brand-model">P-1280 · 12 digit printing</span>
+        </div>
+        <div class="plate-right">
+          <div class="solar" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <button class="settings-btn" id="openSettings" type="button">Settings</button>
+        </div>
+      </div>
+
+      <div class="lcd-well">
+      <div class="lcd" aria-live="polite">
+        <div class="lcd-flags" aria-hidden="true">
+          <span id="flagSnd">SOUND</span>
+          <span id="flagOp">&nbsp;</span>
+          <span id="flagErr">E</span>
+        </div>
+        <div class="lcd-main" id="display">0</div>
+      </div>
+      </div>
+
+      <div class="keys" id="keys">
+        <button class="key clear" data-k="AC" type="button" aria-label="All clear">AC</button>
+        <button class="key fn" data-k="BK" type="button" aria-label="Delete last digit">⌫</button>
+        <button class="key fn" data-k="%" type="button" aria-label="Percent">%</button>
+        <button class="key op" data-k="/" type="button" aria-label="Divide">÷</button>
+
+        <button class="key" data-k="7" type="button">7</button>
+        <button class="key" data-k="8" type="button">8</button>
+        <button class="key" data-k="9" type="button">9</button>
+        <button class="key op" data-k="*" type="button" aria-label="Multiply">×</button>
+
+        <button class="key" data-k="4" type="button">4</button>
+        <button class="key" data-k="5" type="button">5</button>
+        <button class="key" data-k="6" type="button">6</button>
+        <button class="key op" data-k="-" type="button" aria-label="Subtract">−</button>
+
+        <button class="key" data-k="1" type="button">1</button>
+        <button class="key" data-k="2" type="button">2</button>
+        <button class="key" data-k="3" type="button">3</button>
+        <button class="key op" data-k="+" type="button" aria-label="Add">+</button>
+
+        <button class="key fn" data-k="NEG" type="button" aria-label="Change sign">+/−</button>
+        <button class="key" data-k="0" type="button">0</button>
+        <button class="key" data-k="." type="button" aria-label="Decimal point">.</button>
+        <button class="key eq" data-k="=" type="button" aria-label="Equals and print">=</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="sheet-inner">
+    <h2 id="sheetTitle">Settings</h2>
+
+    <div class="group">
+      <span class="group-label">Paper position</span>
+      <div class="seg two" id="paperPos">
+        <button type="button" id="paperWide" data-paper="wide" aria-pressed="true">Wide center</button>
+        <button type="button" id="paperNarrow" data-paper="narrow" aria-pressed="false">Narrow center</button>
+        <button type="button" id="paperLeft" data-paper="left" aria-pressed="false">Left</button>
+        <button type="button" id="paperRight" data-paper="right" aria-pressed="false">Right</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="group-label">Calculator color</span>
+      <div class="seg two" id="finish">
+        <button type="button" id="finishLight" data-finish="light" aria-pressed="true">Light</button>
+        <button type="button" id="finishDark" data-finish="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="group-label">Keep tape history for</span>
+      <div class="seg" id="retention">
+        <button type="button" id="ret30" data-days="30" aria-pressed="false">30 days</button>
+        <button type="button" id="ret60" data-days="60" aria-pressed="false">60 days</button>
+        <button type="button" id="ret90" data-days="90" aria-pressed="false">90 days</button>
+      </div>
+      <p class="group-note" id="storedNote"></p>
+    </div>
+
+    <div class="group">
+      <div class="toggle-row">
+        <span>Key and printer sounds</span>
+        <button type="button" class="row-btn" id="soundToggle" aria-pressed="true">On</button>
+      </div>
+      <div class="toggle-row">
+        <span>Date and time on tape</span>
+        <button type="button" class="row-btn" id="datesToggle" aria-pressed="true">On</button>
+      </div>
+      <div class="toggle-row">
+        <span>Round to 0.00</span>
+        <button type="button" class="row-btn" id="roundToggle" aria-pressed="true">On</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <button type="button" class="row-btn danger" id="clearBtn">Clear tape history</button>
+      <div class="confirm" id="confirmBox" hidden>
+        <p>Remove every calculation from the tape? This can’t be undone.</p>
+        <div class="pair">
+          <button type="button" class="row-btn" id="cancelClear">Keep it</button>
+          <button type="button" class="row-btn danger" id="confirmClear">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="row-btn done" id="closeSettings">Done</button>
+  </div>
+</section>
+
+<script>
+(function () {
+  "use strict";
+  const DAY = 86400000;
+  const MAX_DIGITS = 12;
+  const STORE_KEY = "candacecalc.v1";
+
+  /* ---------------- Persistence (per device) ---------------- */
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+  function saveNow() {
+    saveTimer = 0;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ history: state.history, retention: state.retention, sound: state.sound, paper: state.paper, finish: state.finish, dates: state.dates, round2: state.round2 })); } catch (e) {}
+  }
+  // writes are coalesced so a burst of key presses never waits on storage
+  let saveTimer = 0;
+  function save() { if (!saveTimer) saveTimer = setTimeout(saveNow, 300); }
+  function flushSave() { if (saveTimer) { clearTimeout(saveTimer); saveNow(); } }
+  window.addEventListener("pagehide", flushSave);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) flushSave(); });
+
+  const saved = load() || {};
+  const state = {
+    history: Array.isArray(saved.history) ? saved.history : [],
+    retention: [30, 60, 90].includes(saved.retention) ? saved.retention : 90,
+    sound: saved.sound !== false,
+    paper: ["wide", "narrow", "left", "right"].includes(saved.paper) ? saved.paper : "wide",
+    finish: saved.finish === "dark" ? "dark" : "light",
+    dates: saved.dates !== false,
+    round2: saved.round2 !== false,   // "Round to 0.00": on by default
+    // calculator
+    entry: "0",       // what the user is typing / showing
+    acc: null,        // running value
+    op: null,         // pending operator
+    fresh: true,      // next digit starts a new number
+    err: false,
+    pending: []       // tape lines for the calculation in progress
+  };
+
+  function cleanup() {
+    const cutoff = Date.now() - state.retention * DAY;
+    state.history = state.history.filter(e => e.ts >= cutoff);
+  }
+  cleanup();
+  save();
+
+  /* Example entries shown only until the first real calculation */
+  const now = Date.now();
+  const SAMPLES = [
+    { ts: now - 34 * DAY - 3.2 * 3600000, lines: [["1240", "+"], ["86.5", "="], ["1326.5", "*"]], sample: true },
+    { ts: now - 8 * DAY - 6 * 3600000,    lines: [["2400", "÷"], ["12", "="], ["200", "*"]], sample: true },
+    { ts: now - 1 * DAY - 2 * 3600000,    lines: [["89.99", "×"], ["3", "="], ["269.97", "*"]], sample: true },
+    { ts: now - 40 * 60000,               lines: [["1500", "−"], ["1725.4", "="], ["-225.4", "*"]], sample: true }
+  ];
+
+  /* ---------------- Number helpers ---------------- */
+  function clean(n) { return parseFloat(Number(n).toPrecision(12)); }
+  // rounds half away from zero at 2 places, without binary float slips (1.005 -> 1.01)
+  function roundCents(n) {
+    const a = Math.abs(n);
+    if (a < 0.005) return 0;                    // also avoids exponent-form strings like 1e-7
+    return (n < 0 ? -1 : 1) * Number(Math.round(a + "e2") + "e-2");
+  }
+  function toStr(n) {
+    if (!isFinite(n)) return null;
+    n = clean(n);
+    if (state.round2 && Math.abs(n) < 1e15) n = roundCents(n);
+    let s = String(n);
+    const digits = s.replace(/[-.]/g, "").replace(/e.*$/, "");
+    if (/e/.test(s) || digits.length > MAX_DIGITS) s = n.toExponential(6).replace("e+", "e");
+    return s;
+  }
+  function group(s) {
+    if (/e/.test(s)) return s;
+    const neg = s.startsWith("-");
+    if (neg) s = s.slice(1);
+    const [i, d] = s.split(".");
+    const gi = i.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (neg ? "-" : "") + gi + (d !== undefined ? "." + d : "");
+  }
+  const OPS = { "+": "+", "-": "−", "*": "×", "/": "÷" };
+  function apply(a, op, b) {
+    switch (op) {
+      case "+": return a + b;
+      case "-": return a - b;
+      case "*": return a * b;
+      case "/": return b === 0 ? NaN : a / b;
+    }
+    return b;
+  }
+
+  /* ---------------- Sound (synthesized, no files) ---------------- */
+  let ctx = null;
+  function audio() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { ctx = new AC(); } catch (e) { return null; }
+    }
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    return ctx;
+  }
+  function noiseBuffer(c, secs) {
+    const len = Math.max(1, Math.floor(c.sampleRate * secs));
+    const b = c.createBuffer(1, len, c.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  }
+  /* Bright, toy-like key beeps in the spirit of an 80s calculator's piezo "bip".
+     Digits step through a pentatonic scale so typing a number plays a little tune. */
+  const PENTA = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // every number key plays the same note
+  const PITCH = 0.25; // two octaves below the original set
+  function blip(c, t, freq, dur, vol, type) {
+    freq *= PITCH; vol *= 1.35; // lower notes read quieter, so lift the level a touch
+    const o = c.createOscillator(); o.type = type || "square";
+    o.frequency.setValueAtTime(freq, t);
+    o.frequency.exponentialRampToValueAtTime(freq * 1.04, t + dur * 0.6);
+    const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2400;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    o.connect(lp).connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.01);
+  }
+  function tapSound(k) {
+    if (!state.sound) return;
+    const c = audio(); if (!c) return;
+    const t = c.currentTime;
+    if (k && /^[0-9]$/.test(k)) {
+      blip(c, t, 880 * Math.pow(2, PENTA[+k] / 12), 0.05, 0.07, "square");
+    } else if (k === "=") {
+      blip(c, t, 1175, 0.07, 0.07, "square");
+    } else if (k === "AC") {
+      blip(c, t, 784, 0.07, 0.06, "square");
+    } else if (k && k in OPS) {
+      blip(c, t, 1397, 0.05, 0.065, "triangle");
+      blip(c, t, 2794, 0.03, 0.02, "square");
+    } else {
+      blip(c, t, 1319, 0.04, 0.06, "triangle");
+    }
+  }
+  function ripSound() {
+    if (!state.sound) return;
+    const c = audio(); if (!c) return;
+    const t = c.currentTime;
+    // short, soft "zzip": filtered noise sweeping downward, kept light like the other sounds
+    const n = c.createBufferSource(); n.buffer = noiseBuffer(c, 0.22);
+    const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(1600, t); bp.frequency.exponentialRampToValueAtTime(420, t + 0.2);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.16, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    n.connect(bp).connect(g).connect(c.destination); n.start(t);
+  }
+  function printSound(lineCount) {
+    if (!state.sound) return 0;
+    const c = audio(); if (!c) return 0;
+    const t0 = c.currentTime + 0.02;
+    const perLine = 0.15;
+    // 8-bit take on a printer head: a quick chattering trill per line, then a little
+    // upward "zip" for each paper advance, and a cheerful two-note chime when done
+    for (let l = 0; l < lineCount; l++) {
+      const lt = t0 + l * perLine;
+      for (let k = 0; k < 6; k++) {
+        blip(c, lt + k * 0.014, k % 2 ? 1760 : 2093, 0.012, 0.035, "square");
+      }
+      const ft = lt + 0.095;
+      const o = c.createOscillator(); o.type = "triangle";
+      o.frequency.setValueAtTime(130, ft); o.frequency.exponentialRampToValueAtTime(240, ft + 0.045);
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, ft); g.gain.linearRampToValueAtTime(0.06, ft + 0.008); g.gain.exponentialRampToValueAtTime(0.0008, ft + 0.05);
+      o.connect(g).connect(c.destination); o.start(ft); o.stop(ft + 0.06);
+    }
+    const end = t0 + lineCount * perLine + 0.02;
+    blip(c, end, 1568, 0.09, 0.06, "triangle");
+    blip(c, end + 0.08, 2093, 0.16, 0.06, "triangle");
+    return lineCount * perLine * 1000;
+  }
+
+  /* ---------------- Calculator logic ---------------- */
+  function current() { return parseFloat(state.entry); }
+
+  function digit(d) {
+    if (state.fresh) { state.entry = d === "." ? "0." : d; state.fresh = false; return; }
+    if (d === "." && state.entry.includes(".")) return;
+    if (state.round2 && d !== "." && /\.\d\d$/.test(state.entry)) return;   // max two decimal places
+    if (state.entry.replace(/[-.]/g, "").length >= MAX_DIGITS) return;
+    state.entry = state.entry === "0" && d !== "." ? d : state.entry === "-0" && d !== "." ? "-" + d : state.entry + d;
+  }
+
+  function error() {
+    state.err = true; state.entry = "0"; state.acc = null; state.op = null; state.fresh = true; state.pending = [];
+  }
+
+  function operator(op) {
+    if (state.op && state.fresh && state.pending.length) {
+      // operator changed before typing the next number
+      state.pending[state.pending.length - 1][1] = OPS[op];
+      state.op = op; return;
+    }
+    const cur = current();
+    const curStr = toStr(cur);
+    if (state.op && state.acc !== null) {
+      const r = apply(state.acc, state.op, cur);
+      const rs = toStr(r);
+      if (rs === null) { error(); return; }
+      state.pending.push([curStr, OPS[op]]);
+      state.acc = parseFloat(rs); state.entry = rs;   // carry the same (rounded) value the tape shows
+    } else {
+      state.pending.push([curStr, OPS[op]]);
+      state.acc = cur;
+    }
+    state.op = op; state.fresh = true;
+  }
+
+  /* = with nothing pending works like Enter: it reprints the result on the tape.
+     The same result prints at most 3 times freely; after that each further reprint
+     must wait a little longer (0.1s, 0.2s, 0.3s, ...) so the tape can't be flooded. */
+  let repeatCount = 0, lastRepeat = -1e9;
+  function repeatPrint() {
+    if (state.err) return;
+    const now = performance.now();
+    const wait = repeatCount < 3 ? 0 : (repeatCount - 2) * 100;
+    if (now - lastRepeat < wait) return;
+    repeatCount++; lastRepeat = now;
+    printEntry({ ts: Date.now(), lines: [[toStr(current()), "*"]] });
+    state.fresh = true;
+  }
+  function equals() {
+    if (!state.op || state.acc === null) { repeatPrint(); return; }
+    const cur = current();
+    const r = apply(state.acc, state.op, cur);
+    const rs = toStr(r);
+    if (rs === null) { error(); return; }
+    state.pending.push([toStr(cur), "="]);
+    state.pending.push([rs, "*"]);
+    printEntry({ ts: Date.now(), lines: state.pending });
+    state.pending = []; state.acc = null; state.op = null;
+    state.entry = rs; state.fresh = true;
+    repeatCount = 1; lastRepeat = performance.now();   // the calculation itself is the first print
+  }
+
+  /* AC: whatever was entered gets printed and torn through, then everything resets */
+  function makeRip() {
+    const pts = [];
+    const n = 26;
+    for (let i = 0; i <= n; i++) pts.push((i / n * 100).toFixed(1) + "% " + (Math.random() * 38).toFixed(1) + "%");
+    for (let i = n; i >= 0; i--) pts.push((i / n * 100).toFixed(1) + "% " + (62 + Math.random() * 38).toFixed(1) + "%");
+    return { at: Math.round(38 + Math.random() * 24), poly: pts.join(",") };
+  }
+  /* AC, first press: tear off just the number being typed; the running calculation continues.
+     AC with nothing typed: tear off the whole calculation in progress and start over. */
+  function allClear() {
+    const typed = !state.fresh && state.entry !== "0";
+    if (state.err) {
+      state.entry = "0"; state.acc = null; state.op = null; state.fresh = true; state.err = false; state.pending = [];
+      return;
+    }
+    if (typed) {
+      printEntry({ ts: Date.now(), lines: [[toStr(current()), ""]], voided: true, rip: makeRip() });
+      state.entry = "0"; state.fresh = true;   // keep acc, op and pending lines
+      return;
+    }
+    if (state.pending.length) {
+      printEntry({ ts: Date.now(), lines: state.pending.slice(), voided: true, rip: makeRip() });
+    }
+    state.entry = "0"; state.acc = null; state.op = null; state.fresh = true; state.pending = [];
+  }
+
+  function press(k) {
+    if (k !== "=") repeatCount = 0;
+    if (state.err && k !== "AC") { state.err = false; }
+    if (/^[0-9.]$/.test(k)) digit(k);
+    else if (k in OPS) operator(k);
+    else if (k === "=") equals();
+    else if (k === "AC") { allClear(); }
+    else if (k === "BK") {
+      if (!state.fresh) {
+        state.entry = state.entry.length > 1 && state.entry !== "-0" ? state.entry.slice(0, -1) : "0";
+        if (state.entry === "-" ) state.entry = "0";
+      }
+    }
+    else if (k === "NEG") {
+      if (state.entry !== "0") state.entry = state.entry.startsWith("-") ? state.entry.slice(1) : "-" + state.entry;
+    }
+    else if (k === "%") {
+      const s = toStr(current() / 100); if (s !== null) { state.entry = s; state.fresh = true; }
+    }
+    render();
+  }
+
+  /* ---------------- Rendering ---------------- */
+  const $ = id => document.getElementById(id);
+  const display = $("display"), tape = $("tape"), tapeInner = $("tapeInner");
+  const rail = $("rail"), railTrack = $("railTrack"), railThumb = $("railThumb");
+
+  /* Depth effect + rail, recomputed on scroll */
+  let depthQueued = false;
+  function queueDepth() { if (!depthQueued) { depthQueued = true; requestAnimationFrame(() => { depthQueued = false; updateDepth(); }); } }
+  /* All layout reads happen first, then all style writes (no read/write thrashing).
+     Only entries in or just above the view are touched; values are quantized and
+     written only when they change. */
+  const railNow = $("railNow"), railLabel = $("railLabel");
+  let lastRail = "";
+  function updateDepth() {
+    const vh = tape.clientHeight, top = tape.scrollTop, bottom = top + vh;
+    const sh = tape.scrollHeight, max = sh - vh;
+    // depth fade only while resting on the latest entry; scrolling back keeps everything sharp
+    const resting = max <= 4 || max - top < 6;
+    const kids = tapeInner.children, work = [];
+    for (let i = kids.length - 1; i >= 0; i--) {
+      const el = kids[i];
+      if (!el.classList.contains("entry")) continue;
+      const eb = el.offsetTop + el.offsetHeight;
+      let d = 0;
+      if (resting) d = Math.pow(Math.max(0, Math.min(1, (bottom - eb) / vh)), 1.15);
+      work.push(el, Math.round(d * 20) / 20);
+      if (eb < top) break;                      // everything older is out of view
+    }
+    for (let i = 0; i < work.length; i += 2) {
+      const el = work[i], d = work[i + 1];
+      if (el._d === d) continue;
+      el._d = d;
+      if (d === 0) { el.style.filter = ""; el.style.opacity = ""; }
+      else { el.style.filter = "blur(" + (d * 0.75).toFixed(2) + "px)"; el.style.opacity = (1 - d * 0.32).toFixed(2); }
+    }
+    // rail
+    if (max <= 4) { if (!rail.hidden) rail.hidden = true; return; }
+    if (rail.hidden) rail.hidden = false;
+    const th = railTrack.clientHeight;
+    const thumbH = Math.max(26, th * vh / sh);
+    const list = state.history.length ? state.history : SAMPLES;
+    const label = list.length ? shortAgo(list[0].ts) : "";
+    const key = thumbH.toFixed(0) + "|" + label;
+    if (key !== lastRail) { lastRail = key; railThumb.style.height = thumbH + "px"; railLabel.textContent = label; }
+    railThumb.style.transform = "translateY(" + ((th - thumbH) * (top / max)).toFixed(1) + "px)";
+    railNow.classList.toggle("on", max - top < 6);
+  }
+  function shortAgo(ts) {
+    const days = Math.floor((Date.now() - ts) / DAY);
+    if (days < 1) return "TODAY";
+    if (days < 14) return days + "D";
+    if (days < 60) return Math.round(days / 7) + "W";
+    return Math.round(days / 30) + "MO";
+  }
+  tape.addEventListener("scroll", queueDepth, { passive: true });
+  // drag the rail to jump through history
+  function railJump(ev) {
+    const r = railTrack.getBoundingClientRect();
+    const f = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height));
+    tape.style.scrollBehavior = "auto";
+    tape.scrollTop = f * (tape.scrollHeight - tape.clientHeight);
+  }
+  rail.addEventListener("pointerdown", ev => { rail.setPointerCapture(ev.pointerId); railJump(ev); });
+  rail.addEventListener("pointermove", ev => { if (rail.hasPointerCapture(ev.pointerId)) railJump(ev); });
+  rail.addEventListener("pointerup", () => { tape.style.scrollBehavior = ""; });
+
+  const flagOp = $("flagOp"), flagSnd = $("flagSnd"), flagErr = $("flagErr");
+  const opKeys = Array.from(document.querySelectorAll(".key.op"));
+  let lastShown = "";
+  function render() {
+    const txt = state.err ? "ERROR" : group(state.entry);
+    if (txt !== lastShown) {
+      lastShown = txt;
+      display.textContent = txt;
+      // shrink LCD text for long numbers
+      const len = txt.length;
+      display.style.fontSize = len > 13 ? "clamp(36px, 10vw, 50px)" : len > 10 ? "clamp(44px, 12.5vw, 62px)" : "";
+    }
+    flagOp.textContent = state.op ? OPS[state.op] : " ";
+    flagOp.className = state.op ? "on" : "";
+    flagSnd.className = state.sound ? "on" : "";
+    flagErr.className = state.err ? "on" : "";
+    for (const b of opKeys) b.classList.toggle("active", state.op === b.dataset.k && state.fresh);
+  }
+
+  const DOW = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+  const MON = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  function stampText(ts) {
+    const d = new Date(ts);
+    let h = d.getHours(); const ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12;
+    const m = String(d.getMinutes()).padStart(2, "0");
+    const yr = d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : "";
+    return DOW[d.getDay()] + " " + MON[d.getMonth()] + " " + d.getDate() + yr + "  " + h + ":" + m + " " + ap;
+  }
+  function ago(ts) {
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "JUST NOW";
+    if (mins < 60) return mins + " MIN AGO";
+    const sameDay = new Date(ts).toDateString() === new Date().toDateString();
+    if (sameDay) return "TODAY";
+    const days = Math.max(1, Math.round(diff / DAY));
+    if (days === 1) return "YESTERDAY";
+    if (days < 14) return days + " DAYS AGO";
+    if (days < 60) return Math.round(days / 7) + " WEEKS AGO";
+    return Math.round(days / 30) + " MONTHS AGO";
+  }
+
+  function entryEl(e) {
+    const div = document.createElement("div");
+    div.className = "entry";
+    const st = document.createElement("div");
+    st.className = "stamp";
+    const left = document.createElement("b"); left.textContent = stampText(e.ts);
+    const right = document.createElement("span");
+    right.dataset.ts = e.ts;
+    if (e.sample) { right.className = "sample-tag"; right.dataset.prefix = "EXAMPLE · "; }
+    if (e.voided) { div.classList.add("voided"); right.dataset.prefix = "CLEARED · "; }
+    right.textContent = (right.dataset.prefix || "") + ago(e.ts);
+    st.append(left, right);
+    div.appendChild(st);
+    const body = document.createElement("div"); body.className = "lines";
+    div.appendChild(body);
+    e.lines.forEach(([num, op]) => {
+      const ln = document.createElement("div");
+      ln.className = "line" + (op === "*" ? " total" : "");
+      const n = document.createElement("span"); n.className = "num" + (String(num).startsWith("-") ? " neg" : "");
+      n.textContent = group(String(num));
+      const o = document.createElement("span"); o.className = "op"; o.textContent = op === "*" ? "" : op;
+      ln.append(n, o); body.appendChild(ln);
+    });
+    if (e.voided && e.rip) {
+      const r = document.createElement("div"); r.className = "rip";
+      r.style.top = e.rip.at + "%";
+      r.style.clipPath = "polygon(" + e.rip.poly + ")";
+      r.style.webkitClipPath = r.style.clipPath;
+      body.appendChild(r);
+    }
+    return div;
+  }
+
+  function renderTape() {
+    tapeInner.textContent = "";
+    const list = state.history.length ? state.history : SAMPLES;
+    if (!state.history.length) {
+      const note = document.createElement("div");
+      note.className = "tape-empty";
+      note.textContent = "Your calculations print here when you press =. The entries below are examples.";
+      tapeInner.appendChild(note);
+    }
+    list.forEach(e => tapeInner.appendChild(entryEl(e)));
+    requestAnimationFrame(() => { tape.style.scrollBehavior = "auto"; tape.scrollTop = tape.scrollHeight; tape.style.scrollBehavior = ""; updateDepth(); });
+  }
+
+  function printEntry(e) {
+    const firstReal = state.history.length === 0;
+    state.history.push(e);
+    save();
+    if (firstReal) renderTape();
+    const ms = printSound(Math.min(e.lines.length, 8)) || 600;
+    let el;
+    if (firstReal) { el = tapeInner.lastElementChild; }
+    else { el = entryEl(e); tapeInner.appendChild(el); }
+    el.style.setProperty("--feed-ms", Math.round(ms) + "ms");
+    el.classList.add("printing");
+    const ripEl = el.querySelector(".rip");
+    if (ripEl) { ripEl.style.animationDelay = Math.round(ms) + "ms"; ripEl.classList.add("tearing"); setTimeout(ripSound, ms); }
+    el.addEventListener("animationend", ev => { if (ev.target === el) { el.classList.remove("printing"); queueDepth(); } });
+    // the entry's full height exists immediately (it's revealed by clipping), so one scroll is enough
+    tape.scrollTop = tape.scrollHeight;
+    queueDepth();
+  }
+
+  /* ---------------- Input wiring ---------------- */
+  /* Keys register the instant a finger lands (pointerdown), like a real keypad,
+     instead of waiting for the finger to lift and for the browser to decide it was a tap. */
+  function flash(b) {
+    b.classList.add("pressed");
+    clearTimeout(b._t); b._t = setTimeout(() => b.classList.remove("pressed"), 110);
+  }
+  $("keys").addEventListener("pointerdown", ev => {
+    if (ev.button > 0) return;
+    const b = ev.target.closest(".key"); if (!b) return;
+    ev.preventDefault();                       // no focus ring, text selection or delayed click
+    flash(b);
+    audio(); tapSound(b.dataset.k);
+    press(b.dataset.k);
+  });
+  // keyboard activation of a focused key (Enter / Space) arrives as a click with detail 0
+  $("keys").addEventListener("click", ev => {
+    if (ev.detail !== 0) return;
+    const b = ev.target.closest(".key"); if (!b) return;
+    flash(b); audio(); tapSound(b.dataset.k); press(b.dataset.k);
+  });
+  const KEYMAP = { Enter: "=", "=": "=", Escape: "AC", Backspace: "BK", Delete: "AC", x: "*", X: "*" };
+  document.addEventListener("keydown", ev => {
+    if (!$("sheet").hidden) { if (ev.key === "Escape") closeSheet(); return; }
+    if (ev.target.closest && ev.target.closest("button") && (ev.key === "Enter" || ev.key === " ")) return;
+    let k = KEYMAP[ev.key] || ev.key;
+    if (/^[0-9.]$/.test(k) || k in OPS || ["=", "AC", "BK", "%"].includes(k)) {
+      ev.preventDefault();
+      if (ev.repeat && (k === "=" || k === "AC")) return;  // holding these down shouldn't flood the tape
+      const b = document.querySelector('.key[data-k="' + CSS.escape(k) + '"]');
+      if (b) flash(b);
+      audio(); tapSound(k); press(k);
+    }
+  });
+
+  /* ---------------- Settings ---------------- */
+  const sheet = $("sheet"), scrim = $("scrim");
+  function syncSettings() {
+    document.querySelectorAll("#retention button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.days === state.retention)));
+    document.querySelectorAll("#paperPos button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.paper === state.paper)));
+    document.querySelectorAll("#finish button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.finish === state.finish)));
+    $("roundToggle").textContent = state.round2 ? "On" : "Off";
+    $("roundToggle").setAttribute("aria-pressed", String(state.round2));
+    $("datesToggle").textContent = state.dates ? "On" : "Off";
+    $("datesToggle").setAttribute("aria-pressed", String(state.dates));
+    $("soundToggle").textContent = state.sound ? "On" : "Off";
+    $("soundToggle").setAttribute("aria-pressed", String(state.sound));
+    const n = state.history.length;
+    $("storedNote").textContent = (n === 0 ? "No calculations saved yet" : n === 1 ? "1 calculation saved" : n + " calculations saved") +
+      " on this device. Older entries are removed automatically.";
+  }
+  function openSheet() { syncSettings(); $("confirmBox").hidden = true; scrim.hidden = false; sheet.hidden = false; $("ret" + state.retention).focus(); }
+  function closeSheet() { sheet.hidden = true; scrim.hidden = true; $("openSettings").focus(); }
+  $("openSettings").addEventListener("click", () => { tapSound(); openSheet(); });
+  $("closeSettings").addEventListener("click", closeSheet);
+  scrim.addEventListener("click", closeSheet);
+  $("retention").addEventListener("click", ev => {
+    const b = ev.target.closest("button"); if (!b) return;
+    audio(); tapSound();
+    state.retention = +b.dataset.days; cleanup(); save(); syncSettings(); renderTape();
+  });
+  /* Give the paper 15% more height than it had at full size by scaling the calculator body */
+  function fitLayout() {
+    const m = $("machine"), cs = document.querySelector(".casing"), tw = document.querySelector(".tape-wrap");
+    m.style.setProperty("--z", "1");
+    m.style.setProperty("--tapew", tw.getBoundingClientRect().width + "px");
+    const H = m.clientHeight, hc = cs.getBoundingClientRect().height;
+    if (!H || !hc) return;
+    const natural = Math.max(150, H - hc);          // paper height with the body at full size
+    const target = Math.min(natural * 1.15, H * 0.66); // 15% more paper, always leave a usable keypad
+    const z = Math.max(0.5, Math.min(1, (H - target) / hc));
+    m.style.setProperty("--z", z.toFixed(3));
+    placeSlot();
+    queueDepth();
+  }
+  /* Measure where the paper actually is on screen and fit the printer slot to it:
+     right end flush with the paper's right edge, 4px of slot showing on the left */
+  function placeSlot() {
+    const slot = document.querySelector(".slot"), tw = document.querySelector(".tape-wrap");
+    const tr = tw.getBoundingClientRect();
+    const wantL = tr.left - 4, wantW = tr.right - wantL;
+    slot.style.alignSelf = "flex-start"; slot.style.left = "0"; slot.style.margin = "0";
+    slot.style.width = "100px";
+    const s0 = slot.getBoundingClientRect();
+    const k = s0.width / 100 || 1;                 // screen px per casing px
+    slot.style.width = (wantW / k) + "px";
+    slot.style.marginLeft = ((wantL - s0.left) / k) + "px";
+  }
+  let fitQueued = false;
+  window.addEventListener("resize", () => {
+    if (fitQueued) return; fitQueued = true;
+    requestAnimationFrame(() => { fitQueued = false; fitLayout(); });
+  });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitLayout);
+
+  function applyLook() {
+    $("machine").dataset.paper = state.paper;
+    fitLayout();
+    $("machine").dataset.dates = state.dates ? "on" : "off";
+    document.documentElement.dataset.finish = state.finish;
+    requestAnimationFrame(() => { tape.style.scrollBehavior = "auto"; tape.scrollTop = tape.scrollHeight; tape.style.scrollBehavior = ""; updateDepth(); });
+  }
+  $("paperPos").addEventListener("click", ev => {
+    const b = ev.target.closest("button"); if (!b) return;
+    audio(); tapSound(); state.paper = b.dataset.paper; save(); syncSettings(); applyLook();
+  });
+  $("finish").addEventListener("click", ev => {
+    const b = ev.target.closest("button"); if (!b) return;
+    audio(); tapSound(); state.finish = b.dataset.finish; save(); syncSettings(); applyLook();
+  });
+  $("roundToggle").addEventListener("click", () => {
+    audio(); tapSound(); state.round2 = !state.round2; save(); syncSettings();
+    if (state.round2 && state.fresh) { const s = toStr(current()); if (s !== null) state.entry = s; }
+    render();
+  });
+  $("datesToggle").addEventListener("click", () => {
+    audio(); tapSound(); state.dates = !state.dates; save(); syncSettings(); applyLook();
+  });
+  $("soundToggle").addEventListener("click", () => {
+    state.sound = !state.sound; audio(); tapSound(); save(); syncSettings(); render();
+  });
+  $("clearBtn").addEventListener("click", () => { $("confirmBox").hidden = false; $("cancelClear").focus(); });
+  $("cancelClear").addEventListener("click", () => { $("confirmBox").hidden = true; $("clearBtn").focus(); });
+  $("confirmClear").addEventListener("click", () => {
+    state.history = []; save(); renderTape(); syncSettings(); $("confirmBox").hidden = true; $("clearBtn").focus();
+  });
+
+  applyLook();
+  render();
+  renderTape();
+  // keep "x min ago" labels current
+  // updates only the age labels in place; the tape itself is never rebuilt on a timer
+  setInterval(() => {
+    if (document.hidden) return;
+    tapeInner.querySelectorAll(".stamp span[data-ts]").forEach(s => { s.textContent = (s.dataset.prefix || "") + ago(+s.dataset.ts); });
+    lastRail = ""; queueDepth();
+  }, 60000);
+})();
+</script>
