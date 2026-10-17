@@ -22,7 +22,16 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-status-bar"
-    ]
+      "expo-status-bar",
+      "expo-router",
+      "expo-audio",
+      "expo-font",
+      "expo-asset"
+    ],
+    "scheme": "candacecalc",
+    "backgroundColor": "#2f2620",
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
