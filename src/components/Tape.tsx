@@ -5,7 +5,7 @@ import Animated, { useAnimatedRef, useAnimatedScrollHandler, useSharedValue } fr
 import { shortAgo } from '@/lib/format';
 import type { TapeEntry as Entry } from '@/lib/tape';
 import type { PrintJob } from '@/state/store';
-import { type Theme, fonts } from '@/theme';
+import { type Theme, fonts, gradient } from '@/theme';
 
 import { HistoryRail } from './HistoryRail';
 import { TapeEntry } from './TapeEntry';
@@ -86,10 +86,9 @@ export function Tape({ entries, showingSamples, printJob, dates, narrow, theme: 
             styles.paper,
             {
               backgroundColor: t.paper,
-              experimental_backgroundImage:
-                'linear-gradient(180deg, rgba(70,52,34,0.28) 0%, rgba(70,52,34,0.12) 12%, rgba(70,52,34,0) 32%), ' +
+              ...gradient('linear-gradient(180deg, rgba(70,52,34,0.28) 0%, rgba(70,52,34,0.12) 12%, rgba(70,52,34,0) 32%), ' +
                 'linear-gradient(0deg, rgba(40,28,20,0.20) 0px, rgba(40,28,20,0) 22px), ' +
-                `linear-gradient(90deg, ${t.paperShade} 0px, ${t.paper} 10px, ${t.paper} ${Math.max(10, width - 10)}px, ${t.paperShade} ${width}px)`,
+                `linear-gradient(90deg, ${t.paperShade} 0px, ${t.paper} 10px, ${t.paper} ${Math.max(10, width - 10)}px, ${t.paperShade} ${width}px)`),
             },
           ]}
         >

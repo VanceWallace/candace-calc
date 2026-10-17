@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import type { DemoUsage } from '@/lib/demo';
 import type { TapeEntry, Retention } from '@/lib/tape';
 import type { Finish } from '@/theme';
 
 const STORE_KEY = 'candacecalc.v1';
+const DEMO_KEY = 'candacecalc.demo';
 
 export type PaperPosition = 'wide' | 'narrow' | 'left' | 'right';
 
@@ -55,6 +57,22 @@ export async function save({ settings, history }: Saved): Promise<void> {
   try {
     await AsyncStorage.setItem(STORE_KEY, JSON.stringify({ ...settings, history }));
   } catch {}
+}
+
+export async function loadDemo(): Promise<DemoUsage> {
+  try {
+    const raw = JSON.parse((await AsyncStorage.getItem(DEMO_KEY)) ?? '{}');
+    return {
+      calcs: typeof raw.calcs === 'number' ? raw.calcs : 0,
+      startedAt: typeof raw.startedAt === 'number' ? raw.startedAt : null,
+    };
+  } catch {
+    return { calcs: 0, startedAt: null };
+  }
+}
+
+export function saveDemo(usage: DemoUsage): void {
+  AsyncStorage.setItem(DEMO_KEY, JSON.stringify(usage)).catch(() => {});
 }
 
 function isEntry(e: unknown): e is TapeEntry {

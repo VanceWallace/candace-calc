@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { CalcState, Key } from '@/lib/calculator';
-import { type Theme, fonts } from '@/theme';
+import { type Theme, fonts, gradient } from '@/theme';
 
 import { Keypad } from './Keypad';
 import { Lcd } from './Lcd';
@@ -19,10 +20,12 @@ interface Props {
   onPress: (k: Key) => void;
   onSettings: () => void;
   onLayout: (e: LayoutChangeEvent) => void;
+  /** Drawn over the whole body (the demo-over cover). */
+  children?: ReactNode;
 }
 
 /** The calculator body: printer slot, name plate, display and keys. Every size scales by z. */
-export function Casing({ theme: t, z, vw, vh, calc, sound, paper, onPress, onSettings, onLayout }: Props) {
+export function Casing({ theme: t, z, vw, vh, calc, sound, paper, onPress, onSettings, onLayout, children }: Props) {
   const padX = 14 * z;
   return (
     <View
@@ -37,7 +40,7 @@ export function Casing({ theme: t, z, vw, vh, calc, sound, paper, onPress, onSet
         borderTopRightRadius: 22 * z,
         borderBottomLeftRadius: 26 * z,
         borderBottomRightRadius: 26 * z,
-        experimental_backgroundImage: `linear-gradient(180deg, ${t.casingHi} 0%, ${t.casing} 45%, ${t.casingLo} 100%)`,
+        ...gradient(`linear-gradient(180deg, ${t.casingHi} 0%, ${t.casing} 45%, ${t.casingLo} 100%)`),
         boxShadow: `inset 0 ${2 * z}px 0 rgba(255,255,255,0.55), inset 0 ${-4 * z}px 0 ${t.casingEdge}, 0 ${14 * z}px ${30 * z}px rgba(0,0,0,0.45)`,
       }}
     >
@@ -50,7 +53,7 @@ export function Casing({ theme: t, z, vw, vh, calc, sound, paper, onPress, onSet
           borderRadius: 6,
           borderBottomWidth: 2,
           borderBottomColor: t.casingHi,
-          experimental_backgroundImage: `linear-gradient(180deg, ${t.slotA}, ${t.slotB})`,
+          ...gradient(`linear-gradient(180deg, ${t.slotA}, ${t.slotB})`),
           boxShadow: 'inset 0 2px 3px rgba(0,0,0,0.6)',
         }}
       />
@@ -76,7 +79,7 @@ export function Casing({ theme: t, z, vw, vh, calc, sound, paper, onPress, onSet
                   width: 10 * z,
                   height: 11 * z,
                   borderRadius: 1,
-                  experimental_backgroundImage: 'linear-gradient(160deg, #6b4a32, #2d1d14)',
+                  ...gradient('linear-gradient(160deg, #6b4a32, #2d1d14)'),
                 }}
               />
             ))}
@@ -107,6 +110,7 @@ export function Casing({ theme: t, z, vw, vh, calc, sound, paper, onPress, onSet
       <Lcd calc={calc} sound={sound} theme={t} z={z} vw={vw} />
 
       <Keypad theme={t} z={z} vw={vw} vh={vh} activeOp={calc.fresh ? calc.op : null} onPress={onPress} />
+      {children}
     </View>
   );
 }

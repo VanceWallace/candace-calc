@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { group, OP_GLYPH } from '@/lib/format';
 import type { CalcState } from '@/lib/calculator';
-import { type Theme, fonts } from '@/theme';
+import { type Theme, fonts, gradient } from '@/theme';
 
 interface Props {
   calc: CalcState;
@@ -35,7 +35,7 @@ export function Lcd({ calc, sound, theme: t, z, vw }: Props) {
             height: 9 * z,
             borderBottomLeftRadius: 8 * z,
             borderBottomRightRadius: 8 * z,
-            experimental_backgroundImage: `linear-gradient(180deg, ${t.casingLo}, ${t.casingEdge})`,
+            ...gradient(`linear-gradient(180deg, ${t.casingLo}, ${t.casingEdge})`),
             boxShadow: `0 ${4 * z}px ${6 * z}px rgba(0,0,0,0.28)`,
           },
         ]}

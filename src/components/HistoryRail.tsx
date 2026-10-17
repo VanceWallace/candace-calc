@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
-import { type Theme, fonts } from '@/theme';
+import { type Theme, fonts, gradient } from '@/theme';
 
 import type { ScrollMetrics } from './TapeEntry';
 
@@ -58,7 +58,7 @@ export function HistoryRail({ scroll, label, theme: t, onSeek }: Props) {
         {label}
       </Text>
       <View ref={track} style={styles.track} onLayout={(e) => trackH.set(e.nativeEvent.layout.height)}>
-        <Animated.View style={[styles.thumb, { experimental_backgroundImage: `linear-gradient(90deg, #efe6d2, ${t.paper} 50%, #d8ccb2)` }, thumb]} />
+        <Animated.View style={[styles.thumb, gradient(`linear-gradient(90deg, #efe6d2, ${t.paper} 50%, #d8ccb2)`), thumb]} />
       </View>
       <Animated.View style={[styles.now, { backgroundColor: t.lcdGlow }, nowDot]} />
     </View>

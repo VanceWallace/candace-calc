@@ -1,3 +1,5 @@
+import { Platform, type ViewStyle } from 'react-native';
+
 export type Finish = 'light' | 'dark';
 
 const shared = {
@@ -79,3 +81,11 @@ export const fonts = {
   keyBold: 'Archivo_700Bold',
   keySemi: 'Archivo_600SemiBold',
 };
+
+/**
+ * A CSS gradient background. React Native takes `experimental_backgroundImage`; react-native-web
+ * passes styles through as CSS, where the property is `background-image`.
+ */
+export function gradient(css: string): ViewStyle {
+  return (Platform.OS === 'web' ? { backgroundImage: css } : { experimental_backgroundImage: css }) as ViewStyle;
+}

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text } from 'react-native';
 
 import type { Key as KeyId } from '@/lib/calculator';
 import { type Theme, fonts } from '@/theme';
@@ -23,6 +23,9 @@ interface Props {
 
 const clamp = (min: number, v: number, max: number) => Math.max(min, Math.min(max, v));
 const FLASH_MS = 110;
+// react-native-web waits 50ms before onPressIn, and drops taps released sooner unless the
+// Pressable also has onPress. Keys only use onPressIn, so fire it on touchdown there too.
+const WEB_PRESS = Platform.OS === 'web' ? { delayPressIn: 0 } : null;
 
 export function Key({ k, label, kind, a11y, active, theme: t, z, vw, height, onPress }: Props) {
   const [down, setDown] = useState(false);
@@ -65,6 +68,7 @@ export function Key({ k, label, kind, a11y, active, theme: t, z, vw, height, onP
         timer.current = setTimeout(() => setDown(false), Math.max(0, left));
       }}
       unstable_pressDelay={0}
+      {...WEB_PRESS}
       style={[
         styles.key,
         {

@@ -3,10 +3,11 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Casing } from '@/components/Casing';
+import { DemoBanner, DemoOver } from '@/components/Demo';
 import { Tape } from '@/components/Tape';
 import type { PaperPosition } from '@/state/storage';
 import { useStore } from '@/state/store';
-import { themeFor } from '@/theme';
+import { themeFor, gradient } from '@/theme';
 
 /** Where the paper sits across the machine for each paper position setting. */
 function paperRect(position: PaperPosition, w: number): { x: number; width: number } {
@@ -24,7 +25,7 @@ function paperRect(position: PaperPosition, w: number): { x: number; width: numb
 }
 
 export default function Calculator() {
-  const { settings, tape, history, calc, printJob, pressKey, tap } = useStore();
+  const { settings, tape, history, calc, printJob, demo, pressKey, tap } = useStore();
   const t = themeFor(settings.finish);
   const insets = useSafeAreaInsets();
   const { width: vw, height: vh } = useWindowDimensions();
@@ -51,12 +52,13 @@ export default function Calculator() {
         styles.desk,
         {
           backgroundColor: t.desk,
-          experimental_backgroundImage: `radial-gradient(120% 80% at 50% 0%, ${t.deskHi} 0%, ${t.desk} 70%)`,
+          ...gradient(`radial-gradient(120% 80% at 50% 0%, ${t.deskHi} 0%, ${t.desk} 70%)`),
           paddingTop: insets.top + 10,
           paddingBottom: Math.max(insets.bottom, 12),
         },
       ]}
     >
+      {demo && <DemoBanner limits={demo.limits} usage={demo.usage} theme={t} />}
       <View
         style={[styles.machine, { width: machineW }]}
         onLayout={(e) => setMachineH(e.nativeEvent.layout.height)}
@@ -85,7 +87,9 @@ export default function Calculator() {
             const h1 = e.nativeEvent.layout.height / z;
             if (Math.abs(h1 - casingH1) > 1) setCasingH1(h1);
           }}
-        />
+        >
+          {demo && <DemoOver limits={demo.limits} usage={demo.usage} theme={t} />}
+        </Casing>
       </View>
     </View>
   );

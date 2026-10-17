@@ -1,0 +1,58 @@
+# Builds the web version of the app (with demo limits) and publishes it to GitHub Pages.
+# One-time setup: repo Settings → Pages → Source: "GitHub Actions".
+name: Deploy web demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx jest --ci
+
+      - name: Export web build
+        run: npx expo export --platform web --output-dir dist
+        env:
+          # served from https://<user>.github.io/<repo>/
+          EXPO_BASE_URL: /${{ github.event.repository.name }}
+          # demo ends after 10 calculations or 1 minute, whichever comes first
+          EXPO_PUBLIC_DEMO_CALCS: 10
+          EXPO_PUBLIC_DEMO_SECONDS: 60
+
+      # Pages serves 404.html for unknown paths; the app routes them itself (e.g. /settings).
+      - run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
