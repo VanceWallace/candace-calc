@@ -1,6 +1,6 @@
 /**
  * Optional demo limits, set at build time (the GitHub Pages build sets them; app builds don't).
- *   EXPO_PUBLIC_DEMO_CALCS    completed calculations allowed
+ *   EXPO_PUBLIC_DEMO_CALCS    printouts allowed (calculations, = reprints and AC tears all count)
  *   EXPO_PUBLIC_DEMO_SECONDS  seconds allowed, counted from the first key press
  * The demo ends at whichever limit comes first. Usage is kept in the browser, so this is a
  * friendly limit, not protection: clearing site data resets it.

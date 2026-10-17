@@ -114,8 +114,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setCalc(r.state);
       if (r.print) printEntry(r.print);
       if (DEMO) {
-        // a completed calculation counts; reprints and torn-off numbers don't
-        if (r.print && !r.print.voided && r.print.lines.some(([, mark]) => mark === '=')) {
+        // everything printed counts: calculations, = reprints and numbers torn off with AC
+        if (r.print) {
           demoRef.current = { ...demoRef.current, calcs: demoRef.current.calcs + 1 };
         }
         if (demoRef.current !== demoUsage) {
