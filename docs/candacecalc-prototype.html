@@ -1,4 +1,4 @@
-j<title>CandaceCalc</title>
+<title>CandaceCalc</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -124,10 +124,10 @@ body {
   /* paper leans back from the slot: shading deepens toward the torn top edge */
   background:
     linear-gradient(180deg, rgba(70,52,34,.30) 0, rgba(70,52,34,.12) 12%, rgba(70,52,34,0) 32%),
-    linear-gradient(0deg, rgba(40,28,20,.20) 0, rgba(40,28,20,0) 22px),
+    linear-gradient(0deg, rgba(40,28,20,.16) 0, rgba(40,28,20,0) 14px),
     linear-gradient(90deg, var(--paper-shade) 0, var(--paper) 10px, var(--paper) calc(100% - 10px), var(--paper-shade) 100%);
   box-shadow: 0 6px 18px rgba(0,0,0,.35);
-  padding: 18px 18px 31px;
+  padding: 18px 18px 44px;
   font-family: var(--font-tape);
   color: var(--ink);
   -webkit-overflow-scrolling: touch;
@@ -563,6 +563,12 @@ body {
     if (/e/.test(s) || digits.length > MAX_DIGITS) s = n.toExponential(6).replace("e+", "e");
     return s;
   }
+  // with Round to 0.00 on, every shown value carries two decimals (45 -> 45.00)
+  function fixed2(s) {
+    if (!state.round2 || /e/.test(s)) return s;
+    const n = parseFloat(s);
+    return isFinite(n) ? n.toFixed(2) : s;
+  }
   function group(s) {
     if (/e/.test(s)) return s;
     const neg = s.startsWith("-");
@@ -800,15 +806,23 @@ body {
     const sh = tape.scrollHeight, max = sh - vh;
     // depth fade only while resting on the latest entry; scrolling back keeps everything sharp
     const resting = max <= 4 || max - top < 6;
+    // Distances are measured from the newest entry, so the newest is always fully sharp,
+    // and the fade only starts above a clear zone at the bottom of the paper.
     const kids = tapeInner.children, work = [];
+    const CLEAR = 0.35;                         // bottom 35% of the visible paper stays sharp
+    let newestBottom = null;
     for (let i = kids.length - 1; i >= 0; i--) {
       const el = kids[i];
       if (!el.classList.contains("entry")) continue;
       const eb = el.offsetTop + el.offsetHeight;
+      if (newestBottom === null) newestBottom = eb;
       let d = 0;
-      if (resting) d = Math.pow(Math.max(0, Math.min(1, (bottom - eb) / vh)), 1.15);
+      if (resting) {
+        const above = (newestBottom - eb) / vh;  // 0 for the newest entry
+        d = Math.pow(Math.max(0, Math.min(1, (above - CLEAR) / (1 - CLEAR))), 1.15);
+      }
       work.push(el, Math.round(d * 20) / 20);
-      if (eb < top) break;                      // everything older is out of view
+      if (newestBottom - eb > vh) break;        // everything older is out of view
     }
     for (let i = 0; i < work.length; i += 2) {
       const el = work[i], d = work[i + 1];
@@ -852,7 +866,8 @@ body {
   const opKeys = Array.from(document.querySelectorAll(".key.op"));
   let lastShown = "";
   function render() {
-    const txt = state.err ? "ERROR" : group(state.entry);
+    // while typing, show digits as entered; once a value is settled, show it to two decimals
+    const txt = state.err ? "ERROR" : group(state.fresh ? fixed2(state.entry) : state.entry);
     if (txt !== lastShown) {
       lastShown = txt;
       display.textContent = txt;
@@ -909,7 +924,7 @@ body {
       const ln = document.createElement("div");
       ln.className = "line" + (op === "*" ? " total" : "");
       const n = document.createElement("span"); n.className = "num" + (String(num).startsWith("-") ? " neg" : "");
-      n.textContent = group(String(num));
+      n.textContent = group(fixed2(String(num)));
       const o = document.createElement("span"); o.className = "op"; o.textContent = op === "*" ? "" : op;
       ln.append(n, o); body.appendChild(ln);
     });
@@ -1068,7 +1083,7 @@ body {
   $("roundToggle").addEventListener("click", () => {
     audio(); tapSound(); state.round2 = !state.round2; save(); syncSettings();
     if (state.round2 && state.fresh) { const s = toStr(current()); if (s !== null) state.entry = s; }
-    render();
+    render(); renderTape();
   });
   $("datesToggle").addEventListener("click", () => {
     audio(); tapSound(); state.dates = !state.dates; save(); syncSettings(); applyLook();

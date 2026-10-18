@@ -69,6 +69,7 @@ export default function Calculator() {
           showingSamples={history.length === 0}
           printJob={printJob}
           dates={settings.dates}
+          round2={settings.round2}
           narrow={settings.paper !== 'wide'}
           theme={t}
           resetKey={`${settings.paper}|${settings.dates}|${settings.finish}|${history.length === 0}`}
@@ -80,6 +81,7 @@ export default function Calculator() {
           vh={vh}
           calc={calc}
           sound={settings.sound}
+          round2={settings.round2}
           paper={paper}
           onPress={pressKey}
           onSettings={tap}

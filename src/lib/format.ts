@@ -30,6 +30,13 @@ export function toStr(n: number, round2: boolean): string | null {
   return s;
 }
 
+/** With "Round to 0.00" on, every settled value shows two decimals (45 -> 45.00). */
+export function fixed2(s: string, round2: boolean): string {
+  if (!round2 || /e/.test(s)) return s;
+  const n = parseFloat(s);
+  return isFinite(n) ? n.toFixed(2) : s;
+}
+
 /** Adds thousands separators: 1234567.5 -> 1,234,567.5 */
 export function group(s: string): string {
   if (/e/.test(s)) return s;

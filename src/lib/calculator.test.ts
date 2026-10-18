@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 
 import { type CalcState, type Key, type Print, applyRounding, initialCalc, press } from './calculator';
-import { ago, group, roundCents, stampText, toStr } from './format';
+import { ago, fixed2, group, roundCents, stampText, toStr } from './format';
 
 /** Presses keys in order; returns the final state and everything printed. */
 function run(keys: string, { round2 = true, start = initialCalc, now = 0 } = {}) {
@@ -260,6 +260,19 @@ describe('tape text', () => {
     expect(ago(now - 26 * 3_600_000, now)).toBe('YESTERDAY');
     expect(ago(now - 8 * 86_400_000, now)).toBe('8 DAYS AGO');
     expect(ago(now - 34 * 86_400_000, now)).toBe('5 WEEKS AGO');
+  });
+
+  test('with rounding on, settled values show two decimals', () => {
+    expect(fixed2('45', true)).toBe('45.00');
+    expect(fixed2('-225.4', true)).toBe('-225.40');
+    expect(fixed2('0', true)).toBe('0.00');
+    expect(group(fixed2('1326.5', true))).toBe('1,326.50');
+  });
+
+  test('with rounding off, or in exponent form, values are left alone', () => {
+    expect(fixed2('45', false)).toBe('45');
+    expect(fixed2('3.33333333333', false)).toBe('3.33333333333');
+    expect(fixed2('1.000000e24', true)).toBe('1.000000e24');
   });
 
   test('toStr rejects non-finite values', () => {

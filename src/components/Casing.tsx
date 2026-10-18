@@ -15,6 +15,7 @@ interface Props {
   vh: number;
   calc: CalcState;
   sound: boolean;
+  round2: boolean;
   /** Where the paper sits (x within the machine, and width), so the printer slot can match it. */
   paper: { x: number; width: number };
   onPress: (k: Key) => void;
@@ -25,7 +26,7 @@ interface Props {
 }
 
 /** The calculator body: printer slot, name plate, display and keys. Every size scales by z. */
-export function Casing({ theme: t, z, vw, vh, calc, sound, paper, onPress, onSettings, onLayout, children }: Props) {
+export function Casing({ theme: t, z, vw, vh, calc, sound, round2, paper, onPress, onSettings, onLayout, children }: Props) {
   const padX = 14 * z;
   return (
     <View
@@ -107,7 +108,7 @@ export function Casing({ theme: t, z, vw, vh, calc, sound, paper, onPress, onSet
         </View>
       </View>
 
-      <Lcd calc={calc} sound={sound} theme={t} z={z} vw={vw} />
+      <Lcd calc={calc} sound={sound} round2={round2} theme={t} z={z} vw={vw} />
 
       <Keypad theme={t} z={z} vw={vw} vh={vh} activeOp={calc.fresh ? calc.op : null} onPress={onPress} />
       {children}

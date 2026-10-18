@@ -4,7 +4,7 @@ import Animated, { type SharedValue, Easing, useAnimatedStyle, useSharedValue, w
 import Svg, { Line } from 'react-native-svg';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { ago, group, stampText } from '@/lib/format';
+import { ago, fixed2, group, stampText } from '@/lib/format';
 import type { TapeEntry as Entry } from '@/lib/tape';
 import { type Theme, fonts } from '@/theme';
 
@@ -14,12 +14,15 @@ export interface ScrollMetrics {
   y: SharedValue<number>;
   viewH: SharedValue<number>;
   contentH: SharedValue<number>;
+  /** Bottom edge of the newest entry, in content coordinates. */
+  newestBottom: SharedValue<number>;
 }
 
 interface Props {
   entry: Entry;
   now: number;
   dates: boolean;
+  round2: boolean;
   narrow: boolean;
   last: boolean;
   /** Set while this entry is being printed: the feed length in ms. */
@@ -29,16 +32,21 @@ interface Props {
 }
 
 const FEED_STEPS = 6;
+/** The bottom 35% of the visible paper stays sharp. */
+const DEPTH_CLEAR = 0.35;
 
-function TapeEntryView({ entry: e, now, dates, narrow, last, printMs, scroll, theme: t }: Props) {
+function TapeEntryView({ entry: e, now, dates, round2, narrow, last, printMs, scroll, theme: t }: Props) {
   // ---- depth: entries higher on the paper read as farther away, but only while resting on the latest
   const bottom = useSharedValue(0);
   const depth = useAnimatedStyle(() => {
     const max = scroll.contentH.value - scroll.viewH.value;
     const resting = max <= 4 || max - scroll.y.value < 6;
     if (!resting || scroll.viewH.value <= 0) return { opacity: 1 };
-    const below = (scroll.y.value + scroll.viewH.value - bottom.value) / scroll.viewH.value;
-    const d = Math.round(Math.pow(Math.max(0, Math.min(1, below)), 1.15) * 20) / 20;
+    // Measured from the newest entry, so it is always sharp, and the fade only starts above
+    // a clear zone at the bottom of the paper.
+    const above = (scroll.newestBottom.value - bottom.value) / scroll.viewH.value;
+    const f = Math.max(0, Math.min(1, (above - DEPTH_CLEAR) / (1 - DEPTH_CLEAR)));
+    const d = Math.round(Math.pow(f, 1.15) * 20) / 20;
     return { opacity: 1 - d * 0.32 };
   });
 
@@ -85,7 +93,7 @@ function TapeEntryView({ entry: e, now, dates, narrow, last, printMs, scroll, th
                 allowFontScaling={false}
                 style={[styles.num, { fontSize: size, lineHeight: size * 1.25, color }, total && styles.bold]}
               >
-                {group(num)}
+                {group(fixed2(num, round2))}
               </Text>
               <Text
                 allowFontScaling={false}
@@ -107,6 +115,7 @@ function TapeEntryView({ entry: e, now, dates, narrow, last, printMs, scroll, th
       onLayout={(ev) => {
         const { y, height: h } = ev.nativeEvent.layout;
         bottom.set(y + h);
+        if (last) scroll.newestBottom.set(y + h);
         if (h !== height) setHeight(h);
       }}
     >

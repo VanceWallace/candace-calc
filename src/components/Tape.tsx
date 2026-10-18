@@ -16,6 +16,7 @@ interface Props {
   showingSamples: boolean;
   printJob: PrintJob | null;
   dates: boolean;
+  round2: boolean;
   narrow: boolean;
   theme: Theme;
   /** Changes when the tape should jump back to the latest entry (layout settings changed). */
@@ -28,12 +29,13 @@ interface Props {
 const EDGE_COLOR = '#c5bdb2';
 
 /** The paper tape: leans back from the printer slot, newest entry at the bottom. */
-export function Tape({ entries, showingSamples, printJob, dates, narrow, theme: t, resetKey, style }: Props) {
+export function Tape({ entries, showingSamples, printJob, dates, round2, narrow, theme: t, resetKey, style }: Props) {
   const ref = useAnimatedRef<Animated.ScrollView>();
   const y = useSharedValue(0);
   const viewH = useSharedValue(0);
   const contentH = useSharedValue(0);
-  const scroll = useMemo(() => ({ y, viewH, contentH }), [y, viewH, contentH]);
+  const newestBottom = useSharedValue(0);
+  const scroll = useMemo(() => ({ y, viewH, contentH, newestBottom }), [y, viewH, contentH, newestBottom]);
   const onScroll = useAnimatedScrollHandler((e) => {
     y.set(e.contentOffset.y);
   });
@@ -87,7 +89,7 @@ export function Tape({ entries, showingSamples, printJob, dates, narrow, theme: 
             {
               backgroundColor: t.paper,
               ...gradient('linear-gradient(180deg, rgba(70,52,34,0.28) 0%, rgba(70,52,34,0.12) 12%, rgba(70,52,34,0) 32%), ' +
-                'linear-gradient(0deg, rgba(40,28,20,0.20) 0px, rgba(40,28,20,0) 22px), ' +
+                'linear-gradient(0deg, rgba(40,28,20,0.16) 0px, rgba(40,28,20,0) 14px), ' +
                 `linear-gradient(90deg, ${t.paperShade} 0px, ${t.paper} 10px, ${t.paper} ${Math.max(10, width - 10)}px, ${t.paperShade} ${width}px)`),
             },
           ]}
@@ -121,6 +123,7 @@ export function Tape({ entries, showingSamples, printJob, dates, narrow, theme: 
                 entry={e}
                 now={now}
                 dates={dates}
+                round2={round2}
                 narrow={narrow}
                 last={i === entries.length - 1}
                 printMs={printJob?.id === e.id ? printJob.ms : null}
@@ -147,6 +150,6 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, minHeight: 150, marginBottom: -13, zIndex: 2 },
   tilt: { flex: 1, transformOrigin: 'bottom', transform: [{ perspective: 700 }, { rotateX: '13deg' }] },
   paper: { flex: 1, boxShadow: '0 6px 18px rgba(0,0,0,0.35)' },
-  content: { flexGrow: 1, justifyContent: 'flex-end', paddingTop: 11, paddingBottom: 31 },
+  content: { flexGrow: 1, justifyContent: 'flex-end', paddingTop: 11, paddingBottom: 44 },
   empty: { fontFamily: fonts.tape, fontSize: 17, lineHeight: 25, textAlign: 'center', paddingVertical: 24, paddingHorizontal: 6 },
 });

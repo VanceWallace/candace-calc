@@ -1,12 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { group, OP_GLYPH } from '@/lib/format';
+import { fixed2, group, OP_GLYPH } from '@/lib/format';
 import type { CalcState } from '@/lib/calculator';
 import { type Theme, fonts, gradient } from '@/theme';
 
 interface Props {
   calc: CalcState;
   sound: boolean;
+  round2: boolean;
   theme: Theme;
   z: number;
   vw: number;
@@ -14,8 +15,9 @@ interface Props {
 
 const clamp = (min: number, v: number, max: number) => Math.max(min, Math.min(max, v));
 
-export function Lcd({ calc, sound, theme: t, z, vw }: Props) {
-  const text = calc.err ? 'ERROR' : group(calc.entry);
+export function Lcd({ calc, sound, round2, theme: t, z, vw }: Props) {
+  // while typing, show digits as entered; once a value is settled, show it to two decimals
+  const text = calc.err ? 'ERROR' : group(calc.fresh ? fixed2(calc.entry, round2) : calc.entry);
   // shrink the digits for long numbers
   const base =
     text.length > 13 ? clamp(36, 0.1 * vw, 50) : text.length > 10 ? clamp(44, 0.125 * vw, 62) : clamp(60, 0.17 * vw, 84);
