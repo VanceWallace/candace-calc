@@ -1,13 +1,17 @@
 {
   "expo": {
-    "name": "candace-calc",
+    "name": "CandaceCalc",
     "slug": "candace-calc",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vancewallace.candacecalc",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
