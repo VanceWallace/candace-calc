@@ -66,9 +66,9 @@ export function HistoryRail({ scroll, label, theme: t, onSeek }: Props) {
 }
 
 const styles = StyleSheet.create({
-  rail: { position: 'absolute', right: -22, top: 10, bottom: 25, width: 22, alignItems: 'center', gap: 4 },
-  label: { fontFamily: fonts.keyBold, fontSize: 10, letterSpacing: 0.4, lineHeight: 11, textAlign: 'center' },
-  track: { flex: 1, width: 6, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.35)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)' },
-  thumb: { position: 'absolute', left: -2, right: -2, top: 0, borderRadius: 6, boxShadow: '0 1px 3px rgba(0,0,0,0.45)' },
+  rail: { position: 'absolute', right: -36, top: 10, bottom: 25, width: 36, alignItems: 'center', gap: 4 },
+  label: { fontFamily: fonts.keyBold, fontSize: 12, letterSpacing: 0.4, lineHeight: 14, textAlign: 'center' },
+  track: { flex: 1, width: 10, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.35)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)' },
+  thumb: { position: 'absolute', left: -3, right: -3, top: 0, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.45)' },
   now: { width: 8, height: 8, borderRadius: 4, boxShadow: '0 0 6px rgba(255,170,20,0.7)' },
 });

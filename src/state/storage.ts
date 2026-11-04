@@ -16,6 +16,8 @@ export interface Settings {
   sound: boolean;
   dates: boolean;
   round2: boolean;
+  focusView: boolean;
+  removeTapeExamples: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -25,6 +27,8 @@ export const DEFAULT_SETTINGS: Settings = {
   sound: true,
   dates: true,
   round2: true,
+  focusView: false,
+  removeTapeExamples: false,
 };
 
 export interface Saved {
@@ -48,6 +52,8 @@ export async function load(): Promise<Saved> {
       sound: raw.sound !== false,
       dates: raw.dates !== false,
       round2: raw.round2 !== false,
+      focusView: raw.focusView === true,
+      removeTapeExamples: raw.removeTapeExamples === true,
     },
     history: Array.isArray(raw.history) ? (raw.history as TapeEntry[]).filter(isEntry) : [],
   };

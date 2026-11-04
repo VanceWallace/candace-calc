@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Casing } from '@/components/Casing';
 import { DemoBanner, DemoOver } from '@/components/Demo';
 import { Tape } from '@/components/Tape';
+import { withoutTapeExamples } from '@/lib/samples';
 import type { PaperPosition } from '@/state/storage';
 import { useStore } from '@/state/store';
 import { themeFor, gradient } from '@/theme';
@@ -26,6 +27,7 @@ function paperRect(position: PaperPosition, w: number): { x: number; width: numb
 
 export default function Calculator() {
   const { settings, tape, history, calc, printJob, demo, pressKey, tap } = useStore();
+  const [focused, setFocused] = useState(false);
   const t = themeFor(settings.finish);
   const insets = useSafeAreaInsets();
   const { width: vw, height: vh } = useWindowDimensions();
@@ -42,7 +44,9 @@ export default function Calculator() {
   let z = 1;
   if (machineH && casingH1) {
     const natural = Math.max(150, machineH - casingH1);
-    const target = Math.min(natural * 1.15, machineH * 0.66);
+    const defaultTarget = Math.min(natural * 1.15, machineH * 0.66);
+    const focusTarget = Math.min(machineH * 0.78, machineH - casingH1 * 0.75);
+    const target = settings.focusView && focused ? Math.max(defaultTarget, focusTarget) : defaultTarget;
     z = Math.max(0.5, Math.min(1, (machineH - target) / casingH1));
   }
 
@@ -65,14 +69,17 @@ export default function Calculator() {
       >
         <Tape
           style={{ marginLeft: paper.x, width: paper.width }}
-          entries={tape}
-          showingSamples={history.length === 0}
+          entries={settings.removeTapeExamples ? withoutTapeExamples(tape) : tape}
+          showingSamples={history.length === 0 && !settings.removeTapeExamples}
           printJob={printJob}
           dates={settings.dates}
           round2={settings.round2}
           narrow={settings.paper !== 'wide'}
           theme={t}
-          resetKey={`${settings.paper}|${settings.dates}|${settings.finish}|${history.length === 0}`}
+          resetKey={`${settings.paper}|${settings.dates}|${settings.finish}|${history.length === 0}|${settings.removeTapeExamples}`}
+          onTouchPaper={() => {
+            if (settings.focusView) setFocused(true);
+          }}
         />
         <Casing
           theme={t}
@@ -83,8 +90,15 @@ export default function Calculator() {
           sound={settings.sound}
           round2={settings.round2}
           paper={paper}
-          onPress={pressKey}
-          onSettings={tap}
+          onPress={(key) => {
+            setFocused(false);
+            pressKey(key);
+          }}
+          onTouchStart={() => setFocused(false)}
+          onSettings={() => {
+            setFocused(false);
+            tap();
+          }}
           onLayout={(e) => {
             const h1 = e.nativeEvent.layout.height / z;
             if (Math.abs(h1 - casingH1) > 1) setCasingH1(h1);

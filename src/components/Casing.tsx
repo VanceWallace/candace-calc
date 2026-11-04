@@ -19,6 +19,7 @@ interface Props {
   /** Where the paper sits (x within the machine, and width), so the printer slot can match it. */
   paper: { x: number; width: number };
   onPress: (k: Key) => void;
+  onTouchStart: () => void;
   onSettings: () => void;
   onLayout: (e: LayoutChangeEvent) => void;
   /** Drawn over the whole body (the demo-over cover). */
@@ -26,11 +27,12 @@ interface Props {
 }
 
 /** The calculator body: printer slot, name plate, display and keys. Every size scales by z. */
-export function Casing({ theme: t, z, vw, vh, calc, sound, round2, paper, onPress, onSettings, onLayout, children }: Props) {
+export function Casing({ theme: t, z, vw, vh, calc, sound, round2, paper, onPress, onSettings, onTouchStart, onLayout, children }: Props) {
   const padX = 14 * z;
   return (
     <View
       onLayout={onLayout}
+      onTouchStart={onTouchStart}
       style={{
         marginTop: -6 * z,
         paddingTop: 12 * z,

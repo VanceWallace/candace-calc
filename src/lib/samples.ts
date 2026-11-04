@@ -10,3 +10,8 @@ export function makeSamples(now = Date.now()): TapeEntry[] {
     { id: 's4', ts: now - 40 * 60_000, lines: [['1500', '−'], ['1725.4', '='], ['-225.4', '*']], sample: true },
   ];
 }
+
+/** Remove only the illustrative entries, preserving any real calculations on the tape. */
+export function withoutTapeExamples(entries: TapeEntry[]): TapeEntry[] {
+  return entries.filter((entry) => !entry.sample);
+}

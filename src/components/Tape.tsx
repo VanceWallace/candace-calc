@@ -23,13 +23,14 @@ interface Props {
   resetKey: string;
   /** Horizontal placement (paper position setting). */
   style?: StyleProp<ViewStyle>;
+  onTouchPaper?: () => void;
 }
 
 // Paper colour under the top shading, for the torn edge strip above the paper body.
 const EDGE_COLOR = '#c5bdb2';
 
 /** The paper tape: leans back from the printer slot, newest entry at the bottom. */
-export function Tape({ entries, showingSamples, printJob, dates, round2, narrow, theme: t, resetKey, style }: Props) {
+export function Tape({ entries, showingSamples, printJob, dates, round2, narrow, theme: t, resetKey, style, onTouchPaper }: Props) {
   const ref = useAnimatedRef<Animated.ScrollView>();
   const y = useSharedValue(0);
   const viewH = useSharedValue(0);
@@ -79,7 +80,7 @@ export function Tape({ entries, showingSamples, printJob, dates, round2, narrow,
   const pad = narrow ? 13 : 18;
 
   return (
-    <View style={[styles.wrap, style]}>
+    <View onTouchStart={onTouchPaper} style={[styles.wrap, style]}>
       <View style={styles.tilt}>
         <TornEdge color={EDGE_COLOR} />
         <View
