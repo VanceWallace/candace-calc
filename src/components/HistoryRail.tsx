@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
+import { RAIL_LABEL_SPACING, RAIL_LABEL_WIDTH, railLabelFontSize } from '@/lib/rail';
 import { type Theme, fonts, gradient } from '@/theme';
 
 import type { ScrollMetrics } from './TapeEntry';
@@ -54,9 +55,17 @@ export function HistoryRail({ scroll, label, theme: t, onSeek }: Props) {
       }}
       onResponderMove={(e) => seek(e.nativeEvent.pageY)}
     >
-      <Text allowFontScaling={false} style={[styles.label, { color: t.railLabel }]}>
-        {label}
-      </Text>
+      <View style={styles.labelBox}>
+        <Text
+          allowFontScaling={false}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+          style={[styles.label, { color: t.railLabel, fontSize: railLabelFontSize(label) }]}
+        >
+          {label}
+        </Text>
+      </View>
       <View ref={track} style={styles.track} onLayout={(e) => trackH.set(e.nativeEvent.layout.height)}>
         <Animated.View style={[styles.thumb, gradient(`linear-gradient(90deg, #efe6d2, ${t.paper} 50%, #d8ccb2)`), thumb]} />
       </View>
@@ -67,7 +76,9 @@ export function HistoryRail({ scroll, label, theme: t, onSeek }: Props) {
 
 const styles = StyleSheet.create({
   rail: { position: 'absolute', right: -36, top: 10, bottom: 25, width: 36, alignItems: 'center', gap: 4 },
-  label: { fontFamily: fonts.keyBold, fontSize: 12, letterSpacing: 0.4, lineHeight: 14, textAlign: 'center' },
+  // wider than the rail, so its own box is what limits the text
+  labelBox: { width: RAIL_LABEL_WIDTH },
+  label: { fontFamily: fonts.keyBold, letterSpacing: RAIL_LABEL_SPACING, lineHeight: 14, textAlign: 'center' },
   track: { flex: 1, width: 10, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.35)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)' },
   thumb: { position: 'absolute', left: -3, right: -3, top: 0, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.45)' },
   now: { width: 8, height: 8, borderRadius: 4, boxShadow: '0 0 6px rgba(255,170,20,0.7)' },

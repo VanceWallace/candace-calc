@@ -3,6 +3,7 @@ import { type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-na
 import Animated, { useAnimatedRef, useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 
 import { shortAgo } from '@/lib/format';
+import { tapeIntro } from '@/lib/samples';
 import type { TapeEntry as Entry } from '@/lib/tape';
 import type { PrintJob } from '@/state/store';
 import { type Theme, fonts, gradient } from '@/theme';
@@ -15,6 +16,8 @@ interface Props {
   entries: Entry[];
   showingSamples: boolean;
   printJob: PrintJob | null;
+  /** Entries being rewound by Undo, with the length of the rewind in ms. */
+  rewinds: Record<string, number>;
   dates: boolean;
   round2: boolean;
   narrow: boolean;
@@ -30,7 +33,7 @@ interface Props {
 const EDGE_COLOR = '#c5bdb2';
 
 /** The paper tape: leans back from the printer slot, newest entry at the bottom. */
-export function Tape({ entries, showingSamples, printJob, dates, round2, narrow, theme: t, resetKey, style, onTouchPaper }: Props) {
+export function Tape({ entries, showingSamples, printJob, rewinds, dates, round2, narrow, theme: t, resetKey, style, onTouchPaper }: Props) {
   const ref = useAnimatedRef<Animated.ScrollView>();
   const y = useSharedValue(0);
   const viewH = useSharedValue(0);
@@ -76,6 +79,8 @@ export function Tape({ entries, showingSamples, printJob, dates, round2, narrow,
   const [scrollable, setScrollable] = useState(false);
   const measured = () => setScrollable(contentH.get() - viewH.get() > 4);
 
+  const rewinding = Object.keys(rewinds).length > 0;
+
   const [width, setWidth] = useState(0);
   const pad = narrow ? 13 : 18;
 
@@ -103,21 +108,26 @@ export function Tape({ entries, showingSamples, printJob, dates, round2, narrow,
             overScrollMode="never"
             contentContainerStyle={[styles.content, { paddingHorizontal: pad }]}
             onLayout={(e) => {
-              viewH.set(e.nativeEvent.layout.height);
+              const h = e.nativeEvent.layout.height;
+              // resting on the latest entry and the paper got shorter: keep that entry in view
+              const keepEnd = h < viewH.get() && contentH.get() - viewH.get() - y.get() < 6;
+              viewH.set(h);
+              if (keepEnd) ref.current?.scrollToEnd({ animated: false });
               measured();
               settle();
             }}
             onContentSizeChange={(_w, h) => {
+              const shrank = h < contentH.get();
               contentH.set(h);
               measured();
+              // the paper follows an entry back into the printer
+              if (shrank && rewinding) ref.current?.scrollToEnd({ animated: false });
               settle();
             }}
           >
-            {showingSamples && (
-              <Text allowFontScaling={false} style={[styles.empty, { color: t.inkFaint }]}>
-                Your calculations print here when you press =. The entries below are examples.
-              </Text>
-            )}
+            <Text allowFontScaling={false} style={[styles.empty, { color: t.inkFaint }]}>
+              {tapeIntro(showingSamples)}
+            </Text>
             {entries.map((e, i) => (
               <TapeEntry
                 key={e.id}
@@ -128,6 +138,7 @@ export function Tape({ entries, showingSamples, printJob, dates, round2, narrow,
                 narrow={narrow}
                 last={i === entries.length - 1}
                 printMs={printJob?.id === e.id ? printJob.ms : null}
+                rewindMs={rewinds[e.id] ?? null}
                 scroll={scroll}
                 theme={t}
               />
@@ -152,5 +163,5 @@ const styles = StyleSheet.create({
   tilt: { flex: 1, transformOrigin: 'bottom', transform: [{ perspective: 700 }, { rotateX: '13deg' }] },
   paper: { flex: 1, boxShadow: '0 6px 18px rgba(0,0,0,0.35)' },
   content: { flexGrow: 1, justifyContent: 'flex-end', paddingTop: 11, paddingBottom: 44 },
-  empty: { fontFamily: fonts.tape, fontSize: 17, lineHeight: 25, textAlign: 'center', paddingVertical: 24, paddingHorizontal: 6 },
+  empty: { fontFamily: fonts.tape, fontSize: 17, lineHeight: 25, textAlign: 'center', paddingVertical: 24, paddingHorizontal: 6, marginBottom: 'auto' },
 });

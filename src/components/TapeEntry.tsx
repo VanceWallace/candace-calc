@@ -27,6 +27,8 @@ interface Props {
   last: boolean;
   /** Set while this entry is being printed: the feed length in ms. */
   printMs: number | null;
+  /** Set while this entry is being taken back by Undo: the rewind length in ms. */
+  rewindMs: number | null;
   scroll: ScrollMetrics;
   theme: Theme;
 }
@@ -35,7 +37,7 @@ const FEED_STEPS = 6;
 /** The bottom 35% of the visible paper stays sharp. */
 const DEPTH_CLEAR = 0.35;
 
-function TapeEntryView({ entry: e, now, dates, round2, narrow, last, printMs, scroll, theme: t }: Props) {
+function TapeEntryView({ entry: e, now, dates, round2, narrow, last, printMs, rewindMs, scroll, theme: t }: Props) {
   // ---- depth: entries higher on the paper read as farther away, but only while resting on the latest
   const bottom = useSharedValue(0);
   const depth = useAnimatedStyle(() => {
@@ -61,6 +63,13 @@ function TapeEntryView({ entry: e, now, dates, round2, narrow, last, printMs, sc
     }));
   }, [printMs, height, feed]);
   const reveal = useAnimatedStyle(() => ({ height: (Math.floor(feed.value * FEED_STEPS) / FEED_STEPS) * height }));
+
+  // ---- rewind: Undo pulls the entry back into the printer, in the same steps it came out
+  const rewind = useSharedValue(1);
+  useEffect(() => {
+    if (rewindMs !== null) rewind.set(withTiming(0, { duration: rewindMs, easing: Easing.linear }));
+  }, [rewindMs, rewind]);
+  const collapse = useAnimatedStyle(() => ({ height: (Math.ceil(rewind.value * FEED_STEPS) / FEED_STEPS) * height }));
 
   const body = (withTear: boolean) => (
     <View style={styles.entry}>
@@ -111,12 +120,12 @@ function TapeEntryView({ entry: e, now, dates, round2, narrow, last, printMs, sc
 
   return (
     <Animated.View
-      style={depth}
+      style={[depth, rewindMs !== null && styles.clip, rewindMs !== null && collapse]}
       onLayout={(ev) => {
         const { y, height: h } = ev.nativeEvent.layout;
         bottom.set(y + h);
         if (last) scroll.newestBottom.set(y + h);
-        if (h !== height) setHeight(h);
+        if (rewindMs === null && h !== height) setHeight(h);
       }}
     >
       {/* in-flow copy: reserves the space (hidden while the visible copy feeds out) and owns the tear */}
@@ -151,5 +160,6 @@ const styles = StyleSheet.create({
   mark: { textAlign: 'right', fontFamily: fonts.tapeBold },
   bold: { fontFamily: fonts.tapeBold },
   hidden: { opacity: 0 },
+  clip: { overflow: 'hidden' },
   feed: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden' },
 });

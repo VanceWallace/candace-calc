@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Casing } from '@/components/Casing';
@@ -9,6 +10,8 @@ import { withoutTapeExamples } from '@/lib/samples';
 import type { PaperPosition } from '@/state/storage';
 import { useStore } from '@/state/store';
 import { themeFor, gradient } from '@/theme';
+
+const RESIZE_MS = 320;
 
 /** Where the paper sits across the machine for each paper position setting. */
 function paperRect(position: PaperPosition, w: number): { x: number; width: number } {
@@ -26,7 +29,7 @@ function paperRect(position: PaperPosition, w: number): { x: number; width: numb
 }
 
 export default function Calculator() {
-  const { settings, tape, history, calc, printJob, demo, pressKey, tap } = useStore();
+  const { settings, tape, history, calc, printJob, rewinds, demo, pressKey, tap } = useStore();
   const [focused, setFocused] = useState(false);
   const t = themeFor(settings.finish);
   const insets = useSafeAreaInsets();
@@ -41,14 +44,29 @@ export default function Calculator() {
   // have at full size, while always leaving a usable keypad.
   const [machineH, setMachineH] = useState(0);
   const [casingH1, setCasingH1] = useState(0); // casing height at scale 1
+  const focusing = settings.focusView && focused;
   let z = 1;
   if (machineH && casingH1) {
     const natural = Math.max(150, machineH - casingH1);
     const defaultTarget = Math.min(natural * 1.15, machineH * 0.66);
     const focusTarget = Math.min(machineH * 0.78, machineH - casingH1 * 0.75);
-    const target = settings.focusView && focused ? Math.max(defaultTarget, focusTarget) : defaultTarget;
+    const target = focusing ? Math.max(defaultTarget, focusTarget) : defaultTarget;
     z = Math.max(0.5, Math.min(1, (machineH - target) / casingH1));
   }
+
+  // Moving between the focus view and the normal view glides; first layout just snaps into place.
+  const animatedZ = useSharedValue(z);
+  const wasFocusing = useRef(focusing);
+  const ignoreLayoutUntil = useRef(0);
+  useLayoutEffect(() => {
+    if (wasFocusing.current !== focusing) {
+      wasFocusing.current = focusing;
+      ignoreLayoutUntil.current = Date.now() + RESIZE_MS + 150;
+      animatedZ.set(withTiming(z, { duration: RESIZE_MS, easing: Easing.inOut(Easing.cubic) }));
+    } else {
+      animatedZ.set(z);
+    }
+  }, [z, focusing, animatedZ]);
 
   return (
     <View
@@ -72,6 +90,7 @@ export default function Calculator() {
           entries={settings.removeTapeExamples ? withoutTapeExamples(tape) : tape}
           showingSamples={history.length === 0 && !settings.removeTapeExamples}
           printJob={printJob}
+          rewinds={rewinds}
           dates={settings.dates}
           round2={settings.round2}
           narrow={settings.paper !== 'wide'}
@@ -83,7 +102,8 @@ export default function Calculator() {
         />
         <Casing
           theme={t}
-          z={z}
+          z={animatedZ}
+          settledZ={z}
           vw={vw}
           vh={vh}
           calc={calc}
@@ -100,6 +120,8 @@ export default function Calculator() {
             tap();
           }}
           onLayout={(e) => {
+            // mid-glide the height doesn't correspond to z, so it can't be used to measure
+            if (Date.now() < ignoreLayoutUntil.current) return;
             const h1 = e.nativeEvent.layout.height / z;
             if (Math.abs(h1 - casingH1) > 1) setCasingH1(h1);
           }}

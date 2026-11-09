@@ -6,6 +6,7 @@ import { type CalcState, type Key, type Print, applyRounding, initialCalc, press
 import { DEMO, type DemoLimits, type DemoUsage, demoRemaining } from '@/lib/demo';
 import { makeSamples } from '@/lib/samples';
 import { type TapeEntry, makeRip, pruneHistory } from '@/lib/tape';
+import { type UndoStep, recordUndo } from '@/lib/undo';
 
 import { DEFAULT_SETTINGS, type Settings, load, loadDemo, save, saveDemo } from './storage';
 
@@ -25,6 +26,8 @@ interface Store {
   tape: TapeEntry[];
   calc: CalcState;
   printJob: PrintJob | null;
+  /** Entries being taken back by Undo, with the length of the rewind in ms. */
+  rewinds: Record<string, number>;
   /** Set on demo builds (GitHub Pages): the limits and how much has been used. */
   demo: { limits: DemoLimits; usage: DemoUsage } | null;
   pressKey: (k: Key) => void;
@@ -42,6 +45,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useState<TapeEntry[]>([]);
   const [calc, setCalc] = useState<CalcState>(initialCalc);
   const [printJob, setPrintJob] = useState<PrintJob | null>(null);
+  const [rewinds, setRewinds] = useState<Record<string, number>>({});
+  const undoStack = useRef<UndoStep[]>([]);
   const [demoUsage, setDemoUsage] = useState<DemoUsage>({ calcs: 0, startedAt: null });
   const demoRef = useRef(demoUsage);
 
@@ -84,7 +89,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, [flush]);
 
-  const printEntry = useCallback((p: Print) => {
+  const printEntry = useCallback((p: Print): TapeEntry => {
     const ts = Date.now();
     const entry: TapeEntry = {
       id: ts.toString(36) + Math.random().toString(36).slice(2, 7),
@@ -97,6 +102,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (sound && entry.voided) setTimeout(playRip, ms);
     setHistory((h) => [...h, entry]);
     setPrintJob({ id: entry.id, ms });
+    return entry;
+  }, []);
+
+  const undo = useCallback(() => {
+    const step = undoStack.current.pop();
+    if (!step) return;
+    calcRef.current = step.calc;
+    setCalc(step.calc);
+    if (!step.printed) return;
+    const { id, lines } = step.printed;
+    const ms = (settingsRef.current.sound && playPrint(Math.min(lines, 8))) || 600;
+    setRewinds((r) => ({ ...r, [id]: ms }));
+    setTimeout(() => {
+      setHistory((h) => h.filter((e) => e.id !== id));
+      setRewinds(({ [id]: _done, ...rest }) => rest);
+    }, ms + 40);
   }, []);
 
   const pressKey = useCallback(
@@ -109,13 +130,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         demoRef.current = usage;
       }
       if (settingsRef.current.sound) playKey(k);
-      const r = press(calcRef.current, k, { round2: settingsRef.current.round2, now });
-      calcRef.current = r.state;
-      setCalc(r.state);
-      if (r.print) printEntry(r.print);
+      let didPrint = false;
+      if (k === 'UNDO') {
+        undo();
+      } else {
+        const before = calcRef.current;
+        const r = press(before, k, { round2: settingsRef.current.round2, now });
+        calcRef.current = r.state;
+        setCalc(r.state);
+        const entry = r.print && printEntry(r.print);
+        didPrint = !!entry;
+        undoStack.current = recordUndo(undoStack.current, before, r.state, entry ? { id: entry.id, lines: entry.lines.length } : null);
+      }
       if (DEMO) {
         // everything printed counts: calculations, = reprints and numbers torn off with AC
-        if (r.print) {
+        if (didPrint) {
           demoRef.current = { ...demoRef.current, calcs: demoRef.current.calcs + 1 };
         }
         if (demoRef.current !== demoUsage) {
@@ -124,7 +153,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [printEntry, demoUsage]
+    [printEntry, undo, demoUsage]
   );
 
   const updateSettings = useCallback((patch: Partial<Settings>) => {
@@ -141,6 +170,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const clearHistory = useCallback(() => {
     setHistory([]);
     setPrintJob(null);
+    setRewinds({});
+    undoStack.current = [];
   }, []);
 
   const tap = useCallback(() => {
@@ -154,6 +185,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     tape: history.length ? history : samples,
     calc,
     printJob,
+    rewinds,
     demo: DEMO && { limits: DEMO, usage: demoUsage },
     pressKey,
     updateSettings,

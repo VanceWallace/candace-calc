@@ -43,8 +43,8 @@ const finishes = {
     keyBrown: '#6a5644',
     keyBrownEdge: '#3e3127',
     lcdBezel: '#3b3127',
-    slotA: '#2a221b',
-    slotB: '#4b3f33',
+    slotA: '#0b0705',
+    slotB: '#2a2019',
   },
   dark: {
     casing: '#252527',
@@ -62,8 +62,8 @@ const finishes = {
     keyBrown: '#58585f',
     keyBrownEdge: '#1e1e21',
     lcdBezel: '#101011',
-    slotA: '#050505',
-    slotB: '#1e1e20',
+    slotA: '#000000',
+    slotB: '#0e0e0f',
   },
 };
 

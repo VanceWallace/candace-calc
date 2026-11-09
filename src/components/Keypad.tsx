@@ -1,4 +1,5 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
 import type { Key as KeyId } from '@/lib/calculator';
 import type { Op } from '@/lib/format';
@@ -13,12 +14,13 @@ const ROWS: Def[][] = [
   [['7', '7', 'digit'], ['8', '8', 'digit'], ['9', '9', 'digit'], ['*', '×', 'op', 'Multiply']],
   [['4', '4', 'digit'], ['5', '5', 'digit'], ['6', '6', 'digit'], ['-', '−', 'op', 'Subtract']],
   [['1', '1', 'digit'], ['2', '2', 'digit'], ['3', '3', 'digit'], ['+', '+', 'op', 'Add']],
-  [['NEG', '+/−', 'fn', 'Change sign'], ['0', '0', 'digit'], ['.', '.', 'digit', 'Decimal point'], ['=', '=', 'eq', 'Equals and print']],
+  [['UNDO', 'UNDO', 'fn', 'Undo last action'], ['0', '0', 'digit'], ['.', '.', 'digit', 'Decimal point'], ['=', '=', 'eq', 'Equals and print']],
 ];
 
 interface Props {
   theme: Theme;
-  z: number;
+  z: SharedValue<number>;
+  settledZ: number;
   vw: number;
   vh: number;
   /** Operator to highlight (pending, waiting for the next number). */
@@ -26,14 +28,15 @@ interface Props {
   onPress: (k: KeyId) => void;
 }
 
-export function Keypad({ theme, z, vw, vh, activeOp, onPress }: Props) {
+export function Keypad({ theme, z, settledZ, vw, vh, activeOp, onPress }: Props) {
   const height = Math.max(54, Math.min(70, 0.083 * vh));
-  const gap = 11 * z;
+  const pad = useAnimatedStyle(() => ({ gap: 11 * z.value, marginTop: 6 * z.value }));
+  const row = useAnimatedStyle(() => ({ gap: 11 * z.value, height: height * z.value }));
   return (
-    <View style={{ gap, marginTop: 6 * z }}>
-      {ROWS.map((row, i) => (
-        <View key={i} style={[styles.row, { gap }]}>
-          {row.map(([k, label, kind, a11y]) => (
+    <Animated.View style={pad}>
+      {ROWS.map((keys, i) => (
+        <Animated.View key={i} style={[styles.row, row]}>
+          {keys.map(([k, label, kind, a11y]) => (
             <Key
               key={k}
               k={k}
@@ -43,14 +46,14 @@ export function Keypad({ theme, z, vw, vh, activeOp, onPress }: Props) {
               active={kind === 'op' && activeOp === k}
               theme={theme}
               z={z}
+              settledZ={settledZ}
               vw={vw}
-              height={height}
               onPress={onPress}
             />
           ))}
-        </View>
+        </Animated.View>
       ))}
-    </View>
+    </Animated.View>
   );
 }
 

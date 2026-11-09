@@ -16,7 +16,7 @@ function run(keys: string, { round2 = true, start = initialCalc, now = 0 } = {})
   return { state, prints, display: state.err ? 'ERROR' : group(state.entry) };
 }
 
-/** "12+3=" -> ['1','2','+','3','=']; multi-letter keys go in brackets: "5[NEG][AC]". */
+/** "12+3=" -> ['1','2','+','3','=']; multi-letter keys go in brackets: "5[BK][AC]". */
 function tokens(keys: string): Key[] {
   return (keys.match(/\[[A-Z]+\]|./g) ?? []).map((t) => t.replace(/[[\]]/g, '') as Key);
 }
@@ -117,17 +117,10 @@ describe('entry keys', () => {
   test('backspace', () => {
     expect(run('123[BK]').display).toBe('12');
     expect(run('5[BK]').display).toBe('0');
-    expect(run('5[NEG][BK]').display).toBe('0');
   });
 
   test('backspace does not edit a result', () => {
     expect(run('12+3=[BK]').display).toBe('15');
-  });
-
-  test('+/- toggles the sign, but not on zero', () => {
-    expect(run('5[NEG]').display).toBe('-5');
-    expect(run('5[NEG][NEG]').display).toBe('5');
-    expect(run('[NEG]').display).toBe('0');
   });
 
   test('percent divides by 100 and can be used in a calculation', () => {
@@ -188,9 +181,8 @@ describe('AC clears only the number being entered', () => {
     expect(run('5+0[AC]').prints).toEqual([]);
   });
 
-  test('clears a number changed with % or +/−', () => {
+  test('clears a number changed with %', () => {
     expect(run('100-10=50%[AC]').display).toBe('90');
-    expect(run('100-10=[NEG][AC]').display).toBe('90');
   });
 
   test('on a fresh calculator it prints nothing', () => {
@@ -202,6 +194,39 @@ describe('AC clears only the number being entered', () => {
     expect(r.prints).toEqual([]);
     expect(r.state.err).toBe(false);
     expect(r.display).toBe('0');
+  });
+});
+
+describe('AC tears exactly when a typed number is being cleared', () => {
+  const torn = (keys: string) => run(keys).prints.filter((p) => p.voided);
+
+  test.each([
+    ['a typed number', '50[AC]', '50'],
+    ['a decimal', '0.5[AC]', '0.5'],
+    ['a number being typed mid-calculation', '100-10[AC]', '10'],
+    ['a number typed after a result', '2+3=7[AC]', '7'],
+    ['a number typed after a reprinted result', '5=7[AC]', '7'],
+    ['a number changed with %', '50%[AC]', '0.5'],
+    ['a number shortened with backspace', '123[BK][AC]', '12'],
+  ])('tears %s', (_name, keys, number) => {
+    expect(torn(keys)).toEqual([{ lines: [[number, '']], voided: true }]);
+  });
+
+  test.each([
+    ['a finished calculation', '2+3=[AC]'],
+    ['a bare number already printed with =', '5=[AC]'],
+    ['a result reprinted with =', '2+3==[AC]'],
+    ['a pending operator with no number typed', '12+[AC]'],
+    ['a typed zero', '0[AC]'],
+    ['a number backspaced to zero', '5[BK][AC]'],
+    ['a fresh calculator', '[AC]'],
+    ['an error', '5/0=[AC]'],
+  ])('does not tear %s', (_name, keys) => {
+    expect(torn(keys)).toEqual([]);
+  });
+
+  test('a second AC does not tear again', () => {
+    expect(torn('50[AC][AC]')).toHaveLength(1);
   });
 });
 
@@ -240,7 +265,7 @@ describe('= reprints the result with a throttle', () => {
 
   test('any other key resets the throttle', () => {
     const { state } = run('2+2====');
-    const r = run('[NEG][NEG]=', { start: state, now: state.lastRepeat });
+    const r = run('[BK][BK]=', { start: state, now: state.lastRepeat });
     expect(r.prints).toHaveLength(1);
   });
 });

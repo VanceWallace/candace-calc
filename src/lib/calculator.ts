@@ -3,7 +3,9 @@ import { MAX_DIGITS, OP_GLYPH, type Op, toStr } from './format';
 export type Key =
   | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '.'
   | Op
-  | '=' | 'AC' | 'BK' | 'NEG' | '%';
+  | '=' | 'AC' | 'BK' | '%'
+  /** Handled by the store, which keeps the undo history; press() ignores it. */
+  | 'UNDO';
 
 /** One printed line: the number and its trailing mark (+ − × ÷ =, '*' for a total, '' for none). */
 export type TapeLine = [num: string, mark: string];
@@ -20,7 +22,7 @@ export interface CalcState {
   acc: number | null; // running value
   op: Op | null; // pending operator
   fresh: boolean; // next digit starts a new number
-  /** A number has been typed or changed (digits, %, +/−) since the last operator, = or AC. */
+  /** A number has been typed or changed (digits or %) since the last operator, = or AC. */
   operand: boolean;
   /** What the display showed before that number was started; AC goes back to it. */
   base: string;
@@ -88,8 +90,6 @@ export function press(prev: CalcState, k: Key, { round2, now }: PressOptions): P
       // digit limit
     } else if (s.entry === '0' && k !== '.') {
       s.entry = k;
-    } else if (s.entry === '-0' && k !== '.') {
-      s.entry = '-' + k;
     } else {
       s.entry += k;
     }
@@ -130,6 +130,7 @@ export function press(prev: CalcState, k: Key, { round2, now }: PressOptions): P
           s.lastRepeat = now;
           print = { lines: [[fmt(current())!, '*']] };
           s.fresh = true;
+          s.operand = false; // printed, so AC treats it like any other result rather than tearing it
         }
       }
     } else {
@@ -172,13 +173,7 @@ export function press(prev: CalcState, k: Key, { round2, now }: PressOptions): P
     }
   } else if (k === 'BK') {
     if (!s.fresh) {
-      s.entry = s.entry.length > 1 && s.entry !== '-0' ? s.entry.slice(0, -1) : '0';
-      if (s.entry === '-') s.entry = '0';
-    }
-  } else if (k === 'NEG') {
-    if (s.entry !== '0') {
-      startOperand();
-      s.entry = s.entry.startsWith('-') ? s.entry.slice(1) : '-' + s.entry;
+      s.entry = s.entry.length > 1 ? s.entry.slice(0, -1) : '0';
     }
   } else if (k === '%') {
     const r = fmt(current() / 100);
