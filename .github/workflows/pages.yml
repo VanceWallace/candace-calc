@@ -1,10 +1,9 @@
 # Builds the web version of the app (with demo limits) and publishes it to GitHub Pages.
+# The public demo now deploys from the web-demo branch; this copy only runs when started by hand.
 # One-time setup: repo Settings → Pages → Source: "GitHub Actions".
 name: Deploy web demo
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
