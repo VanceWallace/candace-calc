@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { type ComponentRef, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
@@ -19,7 +19,7 @@ interface Props {
 /** How far back the tape goes, and where you are in it. Drag it to jump through history. */
 export function HistoryRail({ scroll, label, theme: t, onSeek }: Props) {
   const trackH = useSharedValue(0);
-  const track = useRef<View>(null);
+  const track = useRef<ComponentRef<typeof View>>(null);
   const trackTop = useRef(0);
 
   const thumb = useAnimatedStyle(() => {
