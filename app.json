@@ -1,13 +1,17 @@
 {
   "expo": {
-    "name": "candace-calc",
+    "name": "CandaceCalc",
     "slug": "candace-calc",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.glassandwater.candacecalc",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -32,6 +36,13 @@
     "backgroundColor": "#2f2620",
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "de51b8d9-04d4-4511-83a3-71c1c977c2a4"
+      }
+    },
+    "owner": "vancewallace"
   }
 }
