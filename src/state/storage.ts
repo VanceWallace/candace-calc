@@ -27,7 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sound: true,
   dates: true,
   round2: true,
-  focusView: false,
+  focusView: true,
   removeTapeExamples: false,
 };
 
@@ -52,7 +52,7 @@ export async function load(): Promise<Saved> {
       sound: raw.sound !== false,
       dates: raw.dates !== false,
       round2: raw.round2 !== false,
-      focusView: raw.focusView === true,
+      focusView: raw.focusView !== false,
       removeTapeExamples: raw.removeTapeExamples === true,
     },
     history: Array.isArray(raw.history) ? (raw.history as TapeEntry[]).filter(isEntry) : [],
