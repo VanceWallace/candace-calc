@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.glassandwater.candacecalc",
       "config": {
         "usesNonExemptEncryption": false
@@ -31,7 +31,15 @@
       "expo-router",
       "expo-audio",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#2f2620"
+        }
+      ]
     ],
     "scheme": "candacecalc",
     "backgroundColor": "#2f2620",

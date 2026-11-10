@@ -1,0 +1,100 @@
+<title>CandaceCalc Privacy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Layout: a single printed receipt, centered on the desk. */
+:root {
+  --desk: #2f2620;
+  --paper: #fbf8ef;
+  --paper-edge: #ece5d3;
+  --ink: #2b2723;
+  --ink-soft: #6d655a;
+  --rule: #cfc6b2;
+  --amber: #b86a1c;
+  --font-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-tape: "Courier Prime", "Courier New", Courier, monospace;
+  color-scheme: light;
+}
+html { background: var(--desk); }
+body {
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 56px;
+}
+.receipt {
+  max-width: 640px;
+  margin: 0 auto;
+  background: linear-gradient(90deg, var(--paper-edge), var(--paper) 14px, var(--paper) calc(100% - 14px), var(--paper-edge));
+  padding: 44px clamp(20px, 6vw, 48px) 40px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  -webkit-mask: linear-gradient(#000,#000) 0 10px / 100% calc(100% - 10px) no-repeat,
+    conic-gradient(from -45deg at 50% 100%, #000 90deg, #0000 0) 0 0 / 14px 10px repeat-x;
+          mask: linear-gradient(#000,#000) 0 10px / 100% calc(100% - 10px) no-repeat,
+    conic-gradient(from -45deg at 50% 100%, #000 90deg, #0000 0) 0 0 / 14px 10px repeat-x;
+}
+.stamp {
+  font-family: var(--font-tape); font-size: 14px; letter-spacing: .06em;
+  color: var(--ink-soft); text-transform: uppercase; margin: 0 0 6px;
+}
+h1 { font-size: 34px; line-height: 1.15; margin: 0 0 8px; font-weight: 800; text-wrap: balance; }
+h2 {
+  font-size: 15px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  margin: 34px 0 8px; padding-top: 22px; border-top: 1.5px dashed var(--rule);
+}
+p, li { max-width: 62ch; }
+p { margin: 0 0 12px; }
+ul { margin: 0 0 12px; padding-left: 20px; }
+li { margin-bottom: 6px; }
+.lede { font-size: 19px; }
+.total {
+  font-family: var(--font-tape); font-weight: 700; font-size: 18px;
+  border-top: 2px solid var(--ink); padding-top: 10px; margin-top: 14px;
+}
+a { color: var(--amber); font-weight: 700; }
+a:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+.contact { font-family: var(--font-tape); font-size: 18px; font-weight: 700; user-select: all; }
+footer { margin-top: 30px; font-family: var(--font-tape); font-size: 14px; color: var(--ink-soft); }
+</style>
+
+<main class="receipt">
+  <p class="stamp">CandaceCalc · Effective November 10, 2026</p>
+  <h1>Privacy policy and support</h1>
+  <p class="lede">CandaceCalc doesn't collect or share any personal information. Your calculations are saved only on your own device.</p>
+
+  <h2 id="data">What the app keeps</h2>
+  <p>To show your paper tape, CandaceCalc saves your calculations and your settings in the app's own storage on your phone. That includes:</p>
+  <ul>
+    <li>the numbers and results you print to the tape, with the date and time of each</li>
+    <li>your settings, such as paper position, color, sounds and how long to keep history</li>
+  </ul>
+  <p>This information never leaves your device. It is not sent to us or to anyone else.</p>
+
+  <h2 id="removal">How long it's kept</h2>
+  <p>History is deleted automatically after 30, 60 or 90 days, whichever you choose in Settings. You can clear the whole tape at any time with <strong>Settings → Clear tape history</strong>. Deleting the app removes everything it stored.</p>
+
+  <h2 id="none">What the app doesn't do</h2>
+  <ul>
+    <li>No accounts or sign-in</li>
+    <li>No analytics, tracking or advertising</li>
+    <li>No data sold or shared with third parties</li>
+    <li>No access to your contacts, photos, location, camera or microphone</li>
+  </ul>
+
+  <h2 id="children">Children</h2>
+  <p>CandaceCalc doesn't collect information from anyone, including children under 13.</p>
+
+  <h2 id="changes">Changes to this policy</h2>
+  <p>If the app ever starts handling data differently, this page will be updated before that version is released, and the date at the top will change.</p>
+
+  <h2 id="support">Support</h2>
+  <p>Questions, a problem with the app, or an idea for it? Send an email and include your iPhone model and iOS version if something isn't working.</p>
+  <p class="contact">vancito12@hotmail.com</p>
+  <p class="total">THANK YOU FOR USING CANDACECALC</p>
+
+  <footer>© 2026 Vance Wallace</footer>
+</main>
